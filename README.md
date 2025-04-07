@@ -1,33 +1,33 @@
-# MixAmp: Amplicon Read Simulator
+# Bygul: Amplicon Read Simulator
 
 
 A tool for Amplicon read simulation for waste water sequencing or other aplications. Users can easily simulate reads from mutiple samples with different proportions using the tool.
 
 ## Usage
-If you use this workflow in a paper, don't forget to give credits to the authors by citing the URL of this (original) <https://github.com/andersen-lab/MixAmp> repository.
+If you use this workflow in a paper, don't forget to give credits to the authors by citing the URL of this (original) <https://github.com/andersen-lab/Bygul> repository.
 
 ## Installation
-Mixamp is written in python 3 but it requires <a href="https://github.com/lh3/wgsim">wgsim</a> and 
+Bygul is written in python 3 but it requires <a href="https://github.com/lh3/wgsim">wgsim</a> and 
 <a href="https://github.com/seqan/seqan/blob/main/apps/mason2/README.mason_simulator">mason simulator</a>
 to simulate reads.
 
 ### Local build from source
 ```
-git clone https://github.com/andersen-lab/MixAmp
-cd mixamp
+git clone https://github.com/andersen-lab/Bygul
+cd Bygul
 pip install -e .
 ```
 Please note that pip does not install all the requirements,
 some packages need to be installed via Conda or be built from source.
 
 ### Installing via Conda
-1. `pip install git+https://github.com/andersen-lab/MixAmp`
-2. Create a conda environment as mixamp and install the dependencies:
+1. `pip install git+https://github.com/andersen-lab/Bygul`
+2. Create a conda environment as bygul and install the dependencies:
 
 
 ```
-conda create -n mixamp
-conda activate mixamp
+conda create -n bygul
+conda activate bygul
 conda env update --file environment.yml
 ```
 
@@ -36,26 +36,26 @@ conda env update --file environment.yml
 
 Run the tool using the following command.
  ```
-mixamp simulate-proportions [SAMPLE1.fasta,SAMPLE2.fasta,..] [primer.bed] [reference.fasta] --proportions [0.8,0.2,..] --outdir [output_directory]
+bygul simulate-proportions [SAMPLE1.fasta,SAMPLE2.fasta,..] [primer.bed] [reference.fasta] --proportions [0.8,0.2,..] --outdir [output_directory]
  ```
 
 Simulate reads from different samples without defining proportions (will be assigned randomly, proportions can be found in `results/sample_proportions.txt`) and allowing upto 2 SNPs mistmatches in the primer regions.
  ```
-mixamp simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --outdir results/ --maxmismatch 2
+bygul simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --outdir results/ --maxmismatch 2
  ```
 Simulate reads with user-defined proportions and specifing read simulator.
-Mixamp uses wgsim as a simulator but you can change it to mason.
+bygul uses wgsim as a simulator but you can change it to mason.
  ```
-mixamp simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --proportions 0.2,0.8 --simulator mason
+bygul simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --proportions 0.2,0.8 --simulator mason
  ```
 Simulate reads with user-defined proportions and number of reads per amplicon.
  ```
-mixamp simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --proportions 0.2,0.8 --readcnt 1000
+bygul simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --proportions 0.2,0.8 --readcnt 1000
  ```
 
 Simulate reads with additional parameters such as base error rate, read length and indels fraction
  ```
-mixamp simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --proportions 0.2,0.8 --readcnt 1000 --error_rate 0.001 --read_length 400 --indel_fraction 0.001
+bygul simulate-proportions sample.fasta,sample2.fasta primer.bed reference.fasta --proportions 0.2,0.8 --readcnt 1000 --error_rate 0.001 --read_length 400 --indel_fraction 0.001
  ```
 ## Notes
 #### Number of reads per amplicon
@@ -63,7 +63,7 @@ It is recommended to define the number of reads per amplicon to be greater than 
 #### Primer bed file
 Please remember that the primer file must contain a column containing primer sequence. The maximum number of mismatches allowed for each primer sequence is 1 SNP. To change this number, you may use the `--maxmismatches` flag.
 #### Complete set of available parameters
-To learn more about how to adjust other parameters use `mixamp simulate-proportions --help`
+To learn more about how to adjust other parameters use `bygul simulate-proportions --help`
 #### Simulated reads output
 Simulated reads from all samples are located in `provided_output_path/reads.fastq`
 #### Information about amplicon dropouts

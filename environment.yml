@@ -1,4 +1,4 @@
-name: mixamp
+name: bygul
 channels:
   - bioconda
   - conda-forge
@@ -38,7 +38,7 @@ dependencies:
       - click==8.1.7
       - flake8==7.1.1
       - mccabe==0.7.0
-      - mixamp==2024.10
+      - bygul==2024.10
       - numpy==2.1.0
       - pandas==2.2.2
       - prettier==0.0.7

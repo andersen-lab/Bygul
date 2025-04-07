@@ -1,4 +1,4 @@
-name: mixamp CI
+name: bygul CI
 on: 
   push:
     branches: [ main ]

@@ -6,7 +6,7 @@ PYTHON ?= python
 all: ;
 
 lint:
-	flake8 mixamp
+	flake8 bygul
 
 test: all
 	pytest
@@ -16,10 +16,10 @@ test-install: all
 	# is a passive verification that non-py essential files are part of the
 	# installed entity.
 	cd /  # go somewhere to avoid relative imports
-	python -c "import mixamp"
+	python -c "import bygul"
 
 test-cov: all
-	pytest --cov=mixamp
+	pytest --cov=bygul
 
 install: all
 	$(PYTHON) setup.py install

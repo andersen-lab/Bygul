@@ -15,22 +15,22 @@ description = ("Amplicon read simualtor")
 
 
 setup(
-    name="mixamp",
+    name="bygul",
     version="2025.02",
-    packages=find_packages(include=['mixamp']),
+    packages=find_packages(include=['bygul']),
     author="Maryam Ahmadi Jeshvaghane",
     license='BSD 2-Clause',
     author_email="mahmadi@scripps.edu",
-    url="https://github.com/andersen-lab/MixAmp",
+    url="https://github.com/andersen-lab/Bygul",
     description=description,
     long_description=long_description,
     long_description_content_type='text/markdown',
     entry_points='''
         [console_scripts]
-        mixamp=mixamp._cli:cli
+        bygul=bygul._cli:cli
         ''',
     package_data={
-        'mixamp': ['data/*', ],
+        'bygul': ['data/*', ],
     },
     install_requires=[
         "click", "pandas", "biopython",

@@ -122,7 +122,7 @@ def simulate_proportions(
     mean_quality_end,
     seed,
 ):
-    from mixamp.utils import (
+    from bygul.utils import (
         preprocess_primers,
         create_valid_primer_combinations,
         make_amplicon,
