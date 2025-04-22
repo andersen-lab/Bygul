@@ -16,7 +16,7 @@ description = ("Amplicon read simualtor")
 
 setup(
     name="bygul",
-    version="V1.0.1",
+    version="V1.0.3",
     packages=find_packages(include=['bygul']),
     author="Maryam Ahmadi Jeshvaghane",
     license='BSD 2-Clause',
