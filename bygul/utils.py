@@ -8,14 +8,13 @@ import os
 import itertools
 import numpy as np
 import regex as re
-
-
 import click
+
 
 def validate_simulator_options(simulator, params_source):
     """
     Raise click.UsageError if options not valid for the given simulator.
-    
+
     Arguments:
     - simulator: str ('wgsim' or 'mason')
     - params_source: dict mapping param name to whether it was passed on CLI
@@ -25,12 +24,19 @@ def validate_simulator_options(simulator, params_source):
         return params_source.get(opt, False)
 
     if simulator == "wgsim":
-        if was_provided("mean_quality_begin") or was_provided("mean_quality_end") or was_provided("indel_fraction"):
-            raise click.UsageError("--mean_quality_begin, --mean_quality_end and --indel_fraction are only valid with simulator='mason'")
+        if was_provided("mean_quality_begin") or \
+            was_provided("mean_quality_end") or \
+                was_provided("indel_fraction"):
+            raise click.UsageError("--mean_quality_begin,"
+                                   "--mean_quality_end and"
+                                   "--indel_fraction are only"
+                                   "valid with simulator='mason'")
     elif simulator == "mason":
-        for opt in ["standard_deviation", "haplotype", "mutation_rate", "indel_extend_probability"]:
+        for opt in ["standard_deviation",
+                    "haplotype", "mutation_rate", "indel_extend_probability"]:
             if was_provided(opt):
-                raise click.UsageError(f"--{opt.replace('_', '-')} is only valid with simulator='wgsim'")
+                raise click.UsageError(f"--{opt.replace('_', '-')} is only"
+                                       "valid with simulator='wgsim'")
 
 
 def extract_sequence(reference, chrom, start, end):

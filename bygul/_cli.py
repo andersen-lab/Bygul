@@ -6,6 +6,7 @@ import numpy as np
 import sys
 import shutil
 
+
 @click.group(context_settings={"show_default": True})
 @click.version_option("2.0.0")
 def cli():
@@ -152,18 +153,24 @@ def simulate_proportions(
     )
     ctx = click.get_current_context()
     params_source = {
-        k: ctx.get_parameter_source(k) == click.core.ParameterSource.COMMANDLINE
+        k: ctx.get_parameter_source(k) ==
+        click.core.ParameterSource.COMMANDLINE
         for k in ctx.params
     }
     # Run validation
     validate_simulator_options(simulator, params_source)
     if os.path.exists(outdir):
         if not redo:
-            print(f"Directory '{outdir}' already exists. Use --redo to overwrite.")
+            print(f"Directory '{outdir}'"
+                  "already exists. Use --redo to overwrite.")
             sys.exit(1)
         else:
-            print(f"Directory '{outdir}' exists. Removing and recreating because --redo was set.")
+            print(f"Directory '{outdir}' exists. Removing and"
+                  "recreating because --redo was set.")
             shutil.rmtree(outdir)
+            os.makedirs(outdir)
+    else:
+        os.makedirs(outdir)
     sample_names = [fp.split("/")[-1].split(".")[0]
                     for fp in str(genomes).split(",")]
     sample_paths = str(genomes).split(",")
