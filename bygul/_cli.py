@@ -4,6 +4,7 @@ import click
 from tqdm import tqdm
 import numpy as np
 import sys
+import shutil
 
 @click.group(context_settings={"show_default": True})
 @click.version_option("2.0.0")
@@ -110,6 +111,12 @@ def cli():
     default=True,
     help="use this to simulate reads for a haploid organism for wgsim",
 )
+@click.option(
+    "--redo",
+    is_flag=True,
+    default=False,
+    help="Overwrite the output directory if it already exists.",
+)
 def simulate_proportions(
     genomes,
     proportions,
@@ -129,7 +136,8 @@ def simulate_proportions(
     mean_quality_begin,
     mean_quality_end,
     seed,
-    standard_deviation
+    standard_deviation,
+    redo
 ):
     from bygul.utils import (
         preprocess_primers,
@@ -139,15 +147,16 @@ def simulate_proportions(
         run_simulation_on_fasta,
         merge_fastq_files,
         find_closest_primer_match,
-        generate_random_values,
+        generate_random_values
     )
 
     if os.path.exists(outdir):
-        print(f"Directory '{outdir}' already exists.")
-        sys.exit(1)
-    else:
-        os.makedirs(outdir)
-        print(f"Simulated results will be located at:'{outdir}'.")
+        if not redo:
+            print(f"Directory '{outdir}' already exists. Use --redo to overwrite.")
+            sys.exit(1)
+        else:
+            print(f"Directory '{outdir}' exists. Removing and recreating because --redo was set.")
+            shutil.rmtree(outdir)
     sample_names = [fp.split("/")[-1].split(".")[0]
                     for fp in str(genomes).split(",")]
     sample_paths = str(genomes).split(",")
