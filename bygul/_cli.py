@@ -3,6 +3,8 @@ from Bio import SeqIO
 import click
 from tqdm import tqdm
 import numpy as np
+import sys
+import shutil
 
 
 @click.group(context_settings={"show_default": True})
@@ -51,6 +53,14 @@ def cli():
     show_default=True,
     help="Base error rate (e.g., 0.02)"
     " for simulation using both wgsim and mason",
+)
+@click.option(
+    "--standard_deviation",
+    default=50,
+    type=int,
+    show_default=True,
+    help="Standard deviation"
+    " of insert size for wgsim",
 )
 @click.option(
     "--mean_quality_begin",
@@ -102,6 +112,12 @@ def cli():
     default=True,
     help="use this to simulate reads for a haploid organism for wgsim",
 )
+@click.option(
+    "--redo",
+    is_flag=True,
+    default=False,
+    help="Overwrite the output directory if it already exists.",
+)
 def simulate_proportions(
     genomes,
     proportions,
@@ -121,6 +137,8 @@ def simulate_proportions(
     mean_quality_begin,
     mean_quality_end,
     seed,
+    standard_deviation,
+    redo
 ):
     from bygul.utils import (
         preprocess_primers,
@@ -131,13 +149,28 @@ def simulate_proportions(
         merge_fastq_files,
         find_closest_primer_match,
         generate_random_values,
+        validate_simulator_options
     )
-
+    ctx = click.get_current_context()
+    params_source = {
+        k: ctx.get_parameter_source(k) ==
+        click.core.ParameterSource.COMMANDLINE
+        for k in ctx.params
+    }
+    # Run validation
+    validate_simulator_options(simulator, params_source)
     if os.path.exists(outdir):
-        print(f"Directory '{outdir}' already exists.")
+        if not redo:
+            print(f"Directory '{outdir}'"
+                  "already exists. Use --redo to overwrite.")
+            sys.exit(1)
+        else:
+            print(f"Directory '{outdir}' exists. Removing and"
+                  "recreating because --redo was set.")
+            shutil.rmtree(outdir)
+            os.makedirs(outdir)
     else:
         os.makedirs(outdir)
-        print(f"Simulated results will be located at:'{outdir}'.")
     sample_names = [fp.split("/")[-1].split(".")[0]
                     for fp in str(genomes).split(",")]
     sample_paths = str(genomes).split(",")
@@ -248,6 +281,7 @@ def simulate_proportions(
                     mean_quality_begin,
                     mean_quality_end,
                     seed,
+                    standard_deviation
                 )
             read_path1 = os.path.join(
                 os.path.abspath(outdir), name, "reads/merged_reads_1.fastq"
