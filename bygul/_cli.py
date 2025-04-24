@@ -147,9 +147,16 @@ def simulate_proportions(
         run_simulation_on_fasta,
         merge_fastq_files,
         find_closest_primer_match,
-        generate_random_values
+        generate_random_values,
+        validate_simulator_options
     )
-
+    ctx = click.get_current_context()
+    params_source = {
+        k: ctx.get_parameter_source(k) == click.core.ParameterSource.COMMANDLINE
+        for k in ctx.params
+    }
+    # Run validation
+    validate_simulator_options(simulator, params_source)
     if os.path.exists(outdir):
         if not redo:
             print(f"Directory '{outdir}' already exists. Use --redo to overwrite.")
