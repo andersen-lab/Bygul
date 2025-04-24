@@ -263,7 +263,7 @@ def run_simulation_on_fasta(
                 output2,
             ]
             if seed is not None:
-                command.extend(["--s", str(seed)])
+                command.extend(["-S", str(seed)])
             # Add the "-h" flag if haplotype is True
             if haplotype:
                 command.append("-h")
