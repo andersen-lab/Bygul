@@ -21,15 +21,16 @@ Please note that pip does not install all the requirements,
 some packages need to be installed via Conda or be built from source.
 
 ### Installing via Conda
-1. `pip install git+https://github.com/andersen-lab/Bygul`
-2. Create a conda environment as bygul and install the dependencies:
-
-
 ```
-conda create -n bygul
-conda activate bygul
-conda env update --file environment.yml
+conda create -n bygul bioconda::bygul
 ```
+
+### Installing via Pypi
+```
+pip install bygul
+```
+Please note that some dependencies are not available through pypi.
+You need to install them using conda or build from source.
 
 
 ## Example commands
