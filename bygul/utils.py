@@ -209,6 +209,7 @@ def run_simulation_on_fasta(
     mean_quality_begin,
     mean_quality_end,
     seed,
+    sd
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
     # Count the number of contigs in the FASTA file
@@ -247,6 +248,8 @@ def run_simulation_on_fasta(
                 "-r",
                 str(mutation_rate),
                 "-d",
+                str(sd),
+                "-s",
                 str(outer_distance),
                 "-N",
                 str(reads_per_contig),

@@ -53,6 +53,14 @@ def cli():
     " for simulation using both wgsim and mason",
 )
 @click.option(
+    "--standard_deviation",
+    default=50,
+    type=int,
+    show_default=True,
+    help="Standard deviation"
+    " of insert size for wgsim",
+)
+@click.option(
     "--mean_quality_begin",
     default=40,
     type=float,
@@ -121,6 +129,7 @@ def simulate_proportions(
     mean_quality_begin,
     mean_quality_end,
     seed,
+    standard_deviation
 ):
     from bygul.utils import (
         preprocess_primers,
@@ -248,6 +257,7 @@ def simulate_proportions(
                     mean_quality_begin,
                     mean_quality_end,
                     seed,
+                    standard_deviation
                 )
             read_path1 = os.path.join(
                 os.path.abspath(outdir), name, "reads/merged_reads_1.fastq"
