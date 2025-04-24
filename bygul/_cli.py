@@ -3,7 +3,7 @@ from Bio import SeqIO
 import click
 from tqdm import tqdm
 import numpy as np
-
+import sys
 
 @click.group(context_settings={"show_default": True})
 @click.version_option("2.0.0")
@@ -144,6 +144,7 @@ def simulate_proportions(
 
     if os.path.exists(outdir):
         print(f"Directory '{outdir}' already exists.")
+        sys.exit(1)
     else:
         os.makedirs(outdir)
         print(f"Simulated results will be located at:'{outdir}'.")
