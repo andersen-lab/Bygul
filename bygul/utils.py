@@ -383,20 +383,20 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
 
         if left_fwd and right_fwd:
             result_row.update({
-                "left_match_pos": left_fwd,
-                "right_match_pos": right_fwd,
+                "left_primer_loc": left_fwd,
+                "right_primer_loc": right_fwd,
                 "strand": "forward"
             })
         elif left_rev and right_rev:
             result_row.update({
-                "left_match_pos": left_rev,
-                "right_match_pos": right_rev,
+                "left_primer_loc": left_rev,
+                "right_primer_loc": right_rev,
                 "strand": "reverse"
             })
         else:
             result_row.update({
-                "left_match_pos": [],
-                "right_match_pos": [],
+                "left_primer_loc": [],
+                "right_primer_loc": [],
                 "strand": "none"
             })
 
