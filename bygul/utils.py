@@ -347,31 +347,62 @@ def run_simulation_on_fasta(
         subprocess.call(command_merge, shell=True)
 
 
-def find_closest_primer_match(pattern, reference_seq, maxmismatch):
-    """function to find a string allowing up to 1 mismatches"""
-    # Define the fuzzy regex pattern with a maximum number of mismatches
-    # (substitutions)
-    primer_pattern = f"({pattern}){{s<={maxmismatch}}}"
+def find_closest_primer_match(df, reference_seq, maxmismatch):
+    """
+    For each row in df, find all left/right primer match positions (as lists),
+    allowing up to `maxmismatch` mismatches. Ensures both primers are found
+    on the same strand. Returns original df columns + matches.
+    """
+    results = []
 
-    matches = [
-        match.start()
-        for match in re.finditer(primer_pattern, reference_seq, re.IGNORECASE)
-    ]
+    for i, row in df.iterrows():
+        primer_left = row["primer_seq_x"]
+        primer_right = row["primer_seq_y"]
 
-    # if the primer not found, try finding it in the complimentary reverse
-    # strand
-    if len(matches) == 0:
-        matches = [
-            match.start()
-            for match in re.finditer(
-                primer_pattern,
-                str(Seq(reference_seq).reverse_complement()),
-                re.IGNORECASE,
-            )
-        ]
-        return matches
-    else:
-        return matches
+        pattern_left = f"({primer_left}){{s<={maxmismatch}}}"
+        pattern_right = f"({primer_right}){{s<={maxmismatch}}}"
+
+        # Forward strand
+        left_fwd = [m.start() for m in re.finditer(pattern_left,
+                                                   reference_seq,
+                                                   flags=re.IGNORECASE)]
+        right_fwd = [m.start() for m in re.finditer(pattern_right,
+                                                    reference_seq,
+                                                    flags=re.IGNORECASE)]
+
+        # Reverse strand
+        ref_rev = str(Seq(reference_seq).reverse_complement())
+        left_rev = [m.start() for m in re.finditer(pattern_left,
+                                                   ref_rev,
+                                                   flags=re.IGNORECASE)]
+        right_rev = [m.start() for m in re.finditer(pattern_right,
+                                                    ref_rev,
+                                                    flags=re.IGNORECASE)]
+
+        result_row = row.to_dict()  # preserve all original row data
+
+        if left_fwd and right_fwd:
+            result_row.update({
+                "left_match_pos": left_fwd,
+                "right_match_pos": right_fwd,
+                "strand": "forward"
+            })
+        elif left_rev and right_rev:
+            result_row.update({
+                "left_match_pos": left_rev,
+                "right_match_pos": right_rev,
+                "strand": "reverse"
+            })
+        else:
+            result_row.update({
+                "left_match_pos": [],
+                "right_match_pos": [],
+                "strand": "none"
+            })
+
+        results.append(result_row)
+
+    return pd.DataFrame(results)
 
 
 def make_amplicon(left_primer_loc, right_primer_loc, primer_seq_y, reference):
