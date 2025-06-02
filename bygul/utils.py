@@ -141,19 +141,24 @@ def create_valid_primer_combinations(df):
     valid_primers = []  # Use a list instead of concatenating DataFrames
 
     for i in range(len(df)):
-        # Safe assignment using .at[]
-        df.at[i, "valid_combinations"] = evaluate_matches(
-            df.at[i, "left_primer_loc"], df.at[i, "right_primer_loc"]
-        )
+        # Pair coordinates with their mismatch maps
+        left_coords = list(zip(df.at[i, "left_primer_loc"], df.at[i, "left_mismatch_map"]))
+        right_coords = list(zip(df.at[i, "right_primer_loc"], df.at[i, "right_mismatch_map"]))
 
-        for primer_start, primer_end in df.at[i, "valid_combinations"]:
+        # Safe assignment using .at[]
+        df.at[i, "valid_combinations"] = evaluate_matches(left_coords, right_coords)
+
+        for primer_start, primer_end, left_mismatch_map, right_mismatch_map in df.at[i, "valid_combinations"]:
             valid_primers.append(
                 {
                     "amplicon_number": df.at[i, "amplicon_number"],
                     "primer_start": primer_start,
                     "primer_end": primer_end,
+                    "left_mismatch_map": left_mismatch_map,
+                    "right_mismatch_map": right_mismatch_map
                 }
             )
+
 
     # Check if we found any valid primers
     if not valid_primers:
@@ -165,7 +170,7 @@ def create_valid_primer_combinations(df):
 
     # Merge with original DataFrame to include additional columns
     all_amplicons = valid_primers_df.merge(
-        df[["amplicon_number", "primer_seq_x", "primer_seq_y"]],
+        df[["amplicon_number", "primer_seq_x", "primer_seq_y","strand"]],
         how="left",
         on="amplicon_number",
     )
@@ -351,11 +356,26 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
     """
     For each row in df, find all left/right primer match positions (as lists),
     allowing up to `maxmismatch` mismatches. Ensures both primers are found
-    on the same strand. Returns original df columns + matches.
+    on the same strand. Returns original df columns + matches, mismatch maps,
+    and strand.
     """
+
+    def mismatch_alignment(primer, matched_seq):
+        """
+        Returns matched sequence with mismatches shown in parentheses.
+        Example:
+            Primer : AGCT
+            Match  : AGTT
+            Output : AG(T)T
+        """
+        aligned = []
+        for p, m in zip(primer.upper(), matched_seq.upper()):
+            aligned.append(m if p == m else f"({m})")
+        return "".join(aligned)
+
     results = []
 
-    for i, row in df.iterrows():
+    for _, row in df.iterrows():
         primer_left = row["primer_seq_x"]
         primer_right = row["primer_seq_y"]
 
@@ -365,38 +385,74 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
         # Forward strand
         left_fwd = [m.start() for m in re.finditer(pattern_left,
                                                    reference_seq,
-                                                   flags=re.IGNORECASE)]
+                                                   flags=re.IGNORECASE,
+                                                   overlapped=True)]
         right_fwd = [m.start() for m in re.finditer(pattern_right,
                                                     reference_seq,
-                                                    flags=re.IGNORECASE)]
+                                                    flags=re.IGNORECASE,
+                                                    overlapped=True)]
+
+        left_fwd_actual = [reference_seq[pos:pos+len(primer_left)]
+                           for pos in left_fwd]
+        right_fwd_actual = [reference_seq[pos:pos+len(primer_right)]
+                            for pos in right_fwd]
+
+        left_fwd_mismatch_map = [mismatch_alignment(primer_left, seq)
+                                 for seq in left_fwd_actual]
+        right_fwd_mismatch_map = [mismatch_alignment(primer_right, seq)
+                                  for seq in right_fwd_actual]
 
         # Reverse strand
         ref_rev = str(Seq(reference_seq).reverse_complement())
         left_rev = [m.start() for m in re.finditer(pattern_left,
                                                    ref_rev,
-                                                   flags=re.IGNORECASE)]
+                                                   flags=re.IGNORECASE,
+                                                   overlapped=True)]
         right_rev = [m.start() for m in re.finditer(pattern_right,
                                                     ref_rev,
-                                                    flags=re.IGNORECASE)]
+                                                    flags=re.IGNORECASE,
+                                                    overlapped=True)]
 
-        result_row = row.to_dict()  # preserve all original row data
+        left_rev_actual = [ref_rev[pos:pos+len(primer_left)]
+                           for pos in left_rev]
+        right_rev_actual = [ref_rev[pos:pos+len(primer_right)]
+                            for pos in right_rev]
+
+        left_rev_mismatch_map = [mismatch_alignment(primer_left, seq)
+                                 for seq in left_rev_actual]
+        right_rev_mismatch_map = [mismatch_alignment(primer_right, seq)
+                                  for seq in right_rev_actual]
+
+        result_row = row.to_dict()  # Preserve original row data
 
         if left_fwd and right_fwd:
             result_row.update({
                 "left_primer_loc": left_fwd,
                 "right_primer_loc": right_fwd,
+                "left_seq_actual": left_fwd_actual,
+                "right_seq_actual": right_fwd_actual,
+                "left_mismatch_map": left_fwd_mismatch_map,
+                "right_mismatch_map": right_fwd_mismatch_map,
                 "strand": "forward"
             })
         elif left_rev and right_rev:
             result_row.update({
                 "left_primer_loc": left_rev,
                 "right_primer_loc": right_rev,
+                "left_seq_actual": left_rev_actual,
+                "right_seq_actual": right_rev_actual,
+                "left_mismatch_map": left_rev_mismatch_map,
+                "right_mismatch_map": right_rev_mismatch_map,
                 "strand": "reverse"
             })
         else:
             result_row.update({
                 "left_primer_loc": [],
                 "right_primer_loc": [],
+                "left_seq_actual": "none",
+                "right_seq_actual": "none",
+                "left_mismatch_map": "none",
+                "right_mismatch_map": "none",
                 "strand": "none"
             })
 
@@ -423,24 +479,21 @@ def make_amplicon(left_primer_loc, right_primer_loc, primer_seq_y, reference):
 
 
 def evaluate_matches(left_primer_coordinates, right_primer_coordinates):
-    """function to evaluate which coordinates
-    found for each primer makes a valid amplicon"""
-    # if both left and right primer string matches exist,
-    # find left and right primer pairs that can create an amplicon
-    if len(left_primer_coordinates) != 0 and len(
-            right_primer_coordinates) != 0:
+    """Find valid primer pairs that can produce an amplicon with mismatches."""
+    if left_primer_coordinates and right_primer_coordinates:
         valid_combinations = []
-        combinations = list(
-            itertools.product(
-                left_primer_coordinates,
-                right_primer_coordinates)
-        )
-        for combination in combinations:
-            amplicon_length = combination[1] - combination[0]
+        combinations = list(itertools.product(left_primer_coordinates, right_primer_coordinates))
+        
+        for left, right in combinations:
+            left_pos, left_mismatch_map = left
+            right_pos, right_mismatch_map = right
+            amplicon_length = right_pos - left_pos
+
             if 0 < amplicon_length <= 2000:
-                valid_combinations.append(combination)
-            else:
-                pass
+                valid_combinations.append(
+                    (left_pos, right_pos, left_mismatch_map, right_mismatch_map)
+                )
+
         return valid_combinations
     else:
         return []
