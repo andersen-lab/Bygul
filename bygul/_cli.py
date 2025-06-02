@@ -221,7 +221,8 @@ def simulate_proportions(
 
             os.makedirs(os.path.join(outdir, name, "amplicons"))
             all_amplicons.to_csv(
-                os.path.join(outdir, name, "amplicons/amplicon_stats.csv")
+                os.path.join(outdir, name, "amplicons/amplicon_stats.csv"),
+                index=False
             )
 
             all_amplicons["amplicon_sequence"] = all_amplicons.apply(
