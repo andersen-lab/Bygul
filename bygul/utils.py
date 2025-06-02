@@ -142,13 +142,20 @@ def create_valid_primer_combinations(df):
 
     for i in range(len(df)):
         # Pair coordinates with their mismatch maps
-        left_coords = list(zip(df.at[i, "left_primer_loc"], df.at[i, "left_mismatch_map"]))
-        right_coords = list(zip(df.at[i, "right_primer_loc"], df.at[i, "right_mismatch_map"]))
+        left_coords = list(zip(df.at[i, "left_primer_loc"],
+                               df.at[i, "left_mismatch_map"]))
+        right_coords = list(zip(df.at[i, "right_primer_loc"],
+                                df.at[i, "right_mismatch_map"]))
 
         # Safe assignment using .at[]
-        df.at[i, "valid_combinations"] = evaluate_matches(left_coords, right_coords)
-
-        for primer_start, primer_end, left_mismatch_map, right_mismatch_map in df.at[i, "valid_combinations"]:
+        df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
+                                                          right_coords)
+        for (
+            primer_start,
+            primer_end,
+            left_mismatch_map,
+            right_mismatch_map
+        ) in df.at[i, "valid_combinations"]:
             valid_primers.append(
                 {
                     "amplicon_number": df.at[i, "amplicon_number"],
@@ -158,7 +165,6 @@ def create_valid_primer_combinations(df):
                     "right_mismatch_map": right_mismatch_map
                 }
             )
-
 
     # Check if we found any valid primers
     if not valid_primers:
@@ -170,7 +176,7 @@ def create_valid_primer_combinations(df):
 
     # Merge with original DataFrame to include additional columns
     all_amplicons = valid_primers_df.merge(
-        df[["amplicon_number", "primer_seq_x", "primer_seq_y","strand"]],
+        df[["amplicon_number", "primer_seq_x", "primer_seq_y", "strand"]],
         how="left",
         on="amplicon_number",
     )
@@ -482,8 +488,8 @@ def evaluate_matches(left_primer_coordinates, right_primer_coordinates):
     """Find valid primer pairs that can produce an amplicon with mismatches."""
     if left_primer_coordinates and right_primer_coordinates:
         valid_combinations = []
-        combinations = list(itertools.product(left_primer_coordinates, right_primer_coordinates))
-        
+        combinations = list(itertools.product(left_primer_coordinates,
+                                              right_primer_coordinates))
         for left, right in combinations:
             left_pos, left_mismatch_map = left
             right_pos, right_mismatch_map = right
@@ -491,7 +497,9 @@ def evaluate_matches(left_primer_coordinates, right_primer_coordinates):
 
             if 0 < amplicon_length <= 2000:
                 valid_combinations.append(
-                    (left_pos, right_pos, left_mismatch_map, right_mismatch_map)
+                    (left_pos, right_pos,
+                     left_mismatch_map,
+                     right_mismatch_map)
                 )
 
         return valid_combinations
