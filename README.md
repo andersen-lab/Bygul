@@ -68,4 +68,4 @@ To learn more about how to adjust other parameters use `bygul simulate-proportio
 #### Simulated reads output
 Simulated reads from all samples are located in `provided_output_path/reads.fastq`
 #### Information about amplicon dropouts
-In order to find more about amplicon dropouts, please refer to `provided_output_path/sample_name/amplicon_stats.csv` file. This file will have right/left primer matching coordinates as zero if no matches found.
+In order to find more about amplicon dropouts, please refer to `provided_output_path/sample_name/amplicon_stats.csv` file. Please note that primer_seq_x and primer_seq_y define the left and right primer sequence whereas left_mismatch_map and right_mismatch_map shows the actual sequence found in the sample for a better comparison of mismatching bases in the primer sequence.

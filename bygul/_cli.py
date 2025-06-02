@@ -206,18 +206,8 @@ def simulate_proportions(
             genome_seq = next(SeqIO.parse(path, "fasta"))
             print(f"Extracting amplicons for sample {name}...")
 
-            df["left_primer_loc"] = df.apply(
-                lambda row: find_closest_primer_match(
-                    str(row["primer_seq_x"]), str(genome_seq.seq), maxmismatch
-                ),
-                axis=1,
-            )
-            df["right_primer_loc"] = df.apply(
-                lambda row: find_closest_primer_match(
-                    str(row["primer_seq_y"]), str(genome_seq.seq), maxmismatch
-                ),
-                axis=1,
-            )
+            df = find_closest_primer_match(df, str(genome_seq.seq),
+                                           maxmismatch)
             all_amplicons = create_valid_primer_combinations(df)
             all_amplicons = all_amplicons.fillna(0)
             all_amplicons["amplicon_length"] = np.where(
@@ -231,7 +221,8 @@ def simulate_proportions(
 
             os.makedirs(os.path.join(outdir, name, "amplicons"))
             all_amplicons.to_csv(
-                os.path.join(outdir, name, "amplicons/amplicon_stats.csv")
+                os.path.join(outdir, name, "amplicons/amplicon_stats.csv"),
+                index=False
             )
 
             all_amplicons["amplicon_sequence"] = all_amplicons.apply(
