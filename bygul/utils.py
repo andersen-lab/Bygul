@@ -12,6 +12,36 @@ import click
 import warnings
 
 
+def assess_genome_quality_from_fasta(fasta_path):
+    """
+    Parses a FASTA genome file and assesses quality by:
+    - Counting ambiguous (non-ACGT) bases.
+    - Reporting the length of each contig.
+
+    Parameters:
+        fasta_path (str): Path to the FASTA file.
+
+    Returns:
+        dict: {
+            'total_ambiguous_bases': int,
+            'contig_lengths': dict of {contig_id: length}
+        }
+    """
+    ambiguous_bases = {'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N'}
+    total_ambiguous = 0
+    contig_lengths = {}
+
+    for record in SeqIO.parse(fasta_path, "fasta"):
+        seq = str(record.seq).upper()
+        contig_lengths[record.id] = len(seq)
+        total_ambiguous += sum(1 for base in seq if base in ambiguous_bases)
+
+    return {
+        'total_ambiguous_bases': total_ambiguous,
+        'contig_lengths': contig_lengths
+    }
+
+
 def validate_simulator_options(simulator, params_source):
     """
     Raise click.UsageError if options not valid for the given simulator.
