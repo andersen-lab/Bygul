@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import sys
 import shutil
+import warnings
 
 
 @click.group(context_settings={"show_default": True})
@@ -149,7 +150,8 @@ def simulate_proportions(
         merge_fastq_files,
         find_closest_primer_match,
         generate_random_values,
-        validate_simulator_options
+        validate_simulator_options,
+        assess_genome_quality_from_fasta
     )
     ctx = click.get_current_context()
     params_source = {
@@ -175,9 +177,32 @@ def simulate_proportions(
                     for fp in str(genomes).split(",")]
     sample_paths = str(genomes).split(",")
 
+    for genome in sample_paths:
+        report = assess_genome_quality_from_fasta(genome)
+        num_contigs = len(report['contig_lengths'])
+        num_ambiguous = report['total_ambiguous_bases']
+
+        # Warnings handled here
+        if num_ambiguous > 0:
+            warnings.warn(f"{genome}: Contains {num_ambiguous}"
+                          "ambiguous base(s)."
+                          "Please choose a better quality genome..")
+
+        if num_contigs > 1:
+            warnings.warn(f"{genome}: Contains {num_contigs} contigs."
+                          "Does your organism have more than one chromosome?"
+                          "Are you providing high quality assemblies?")
+
+        # Print results
+        print(f"\nGenome: {genome}")
+        print(f"  Total ambiguous bases: {num_ambiguous}")
+        print("  Contig lengths:")
+        for contig, length in report['contig_lengths'].items():
+            print(f"    {contig}: {length}")
+
     if proportions == "NA":
         if len(sample_names) == 1:
-            print("Only one sample provided."
+            print("Only one sample provided. "
                   "Using 1.0 as the sample proportion.")
             proportions = [1]
         else:

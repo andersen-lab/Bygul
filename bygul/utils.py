@@ -9,6 +9,37 @@ import itertools
 import numpy as np
 import regex as re
 import click
+import warnings
+
+
+def assess_genome_quality_from_fasta(fasta_path):
+    """
+    Parses a FASTA genome file and assesses quality by:
+    - Counting ambiguous (non-ACGT) bases.
+    - Reporting the length of each contig.
+
+    Parameters:
+        fasta_path (str): Path to the FASTA file.
+
+    Returns:
+        dict: {
+            'total_ambiguous_bases': int,
+            'contig_lengths': dict of {contig_id: length}
+        }
+    """
+    ambiguous_bases = {'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N'}
+    total_ambiguous = 0
+    contig_lengths = {}
+
+    for record in SeqIO.parse(fasta_path, "fasta"):
+        seq = str(record.seq).upper()
+        contig_lengths[record.id] = len(seq)
+        total_ambiguous += sum(1 for base in seq if base in ambiguous_bases)
+
+    return {
+        'total_ambiguous_bases': total_ambiguous,
+        'contig_lengths': contig_lengths
+    }
 
 
 def validate_simulator_options(simulator, params_source):
@@ -173,10 +204,11 @@ def create_valid_primer_combinations(df):
 
     # Convert collected data to DataFrame efficiently
     valid_primers_df = pd.DataFrame.from_records(valid_primers)
-
     # Merge with original DataFrame to include additional columns
-    all_amplicons = valid_primers_df.merge(
-        df[["amplicon_number", "primer_seq_x", "primer_seq_y", "strand"]],
+    df = df[["amplicon_number", "primer_seq_x",
+             "primer_seq_y", "ambiguous_bases"]]
+    all_amplicons = df.merge(
+        valid_primers_df,
         how="left",
         on="amplicon_number",
     )
@@ -363,23 +395,27 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
     For each row in df, find all left/right primer match positions (as lists),
     allowing up to `maxmismatch` mismatches. Ensures both primers are found
     on the same strand. Returns original df columns + matches, mismatch maps,
-    and strand.
+    strand, and whether primers contain ambiguous bases (IUPAC codes).
     """
 
+    # Extended ambiguity-aware mismatch display
     def mismatch_alignment(primer, matched_seq):
         """
         Returns matched sequence with mismatches shown in parentheses.
-        Example:
-            Primer : AGCT
-            Match  : AGTT
-            Output : AG(T)T
+        Also returns a flag if primer contains any ambiguous base.
         """
+        ambiguous_bases = {'R', 'Y', 'S', 'W',
+                           'K', 'M', 'B', 'D',
+                           'H', 'V', 'N'}
+        has_ambiguity = any(base in ambiguous_bases
+                            for base in matched_seq.upper())
         aligned = []
         for p, m in zip(primer.upper(), matched_seq.upper()):
             aligned.append(m if p == m else f"({m})")
-        return "".join(aligned)
+        return "".join(aligned), has_ambiguity
 
     results = []
+    warned = False
 
     for _, row in df.iterrows():
         primer_left = row["primer_seq_x"]
@@ -388,7 +424,7 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
         pattern_left = f"({primer_left}){{s<={maxmismatch}}}"
         pattern_right = f"({primer_right}){{s<={maxmismatch}}}"
 
-        # Forward strand
+        # Forward strand search
         left_fwd = [m.start() for m in re.finditer(pattern_left,
                                                    reference_seq,
                                                    flags=re.IGNORECASE,
@@ -403,12 +439,15 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
         right_fwd_actual = [reference_seq[pos:pos+len(primer_right)]
                             for pos in right_fwd]
 
-        left_fwd_mismatch_map = [mismatch_alignment(primer_left, seq)
-                                 for seq in left_fwd_actual]
-        right_fwd_mismatch_map = [mismatch_alignment(primer_right, seq)
-                                  for seq in right_fwd_actual]
+        left_fwd_mismatch_map, left_fwd_has_ambig = zip(*[
+            mismatch_alignment(primer_left, seq) for seq in left_fwd_actual
+        ]) if left_fwd_actual else ([], [])
 
-        # Reverse strand
+        right_fwd_mismatch_map, right_fwd_has_ambig = zip(*[
+            mismatch_alignment(primer_right, seq) for seq in right_fwd_actual
+        ]) if right_fwd_actual else ([], [])
+
+        # Reverse strand search
         ref_rev = str(Seq(reference_seq).reverse_complement())
         left_rev = [m.start() for m in re.finditer(pattern_left,
                                                    ref_rev,
@@ -424,12 +463,31 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
         right_rev_actual = [ref_rev[pos:pos+len(primer_right)]
                             for pos in right_rev]
 
-        left_rev_mismatch_map = [mismatch_alignment(primer_left, seq)
-                                 for seq in left_rev_actual]
-        right_rev_mismatch_map = [mismatch_alignment(primer_right, seq)
-                                  for seq in right_rev_actual]
+        left_rev_mismatch_map, left_rev_has_ambig = zip(*[
+            mismatch_alignment(primer_left, seq) for seq in left_rev_actual
+        ]) if left_rev_actual else ([], [])
 
-        result_row = row.to_dict()  # Preserve original row data
+        right_rev_mismatch_map, right_rev_has_ambig = zip(*[
+            mismatch_alignment(primer_right, seq) for seq in right_rev_actual
+        ]) if right_rev_actual else ([], [])
+
+        # Check if any ambiguous bases are in the primers or alignments
+        has_ambiguous_base = any([
+            any(b in primer_left.upper() for b in "RYSWKMBDHVN"),
+            any(b in primer_right.upper() for b in "RYSWKMBDHVN"),
+            any(left_fwd_has_ambig) if left_fwd_has_ambig else False,
+            any(right_fwd_has_ambig) if right_fwd_has_ambig else False,
+            any(left_rev_has_ambig) if left_rev_has_ambig else False,
+            any(right_rev_has_ambig) if right_rev_has_ambig else False,
+        ])
+        if has_ambiguous_base and not warned:
+            warnings.warn("One or more primers contain ambiguous"
+                          "bases (e.g., N, R, Y, etc)."
+                          "Matches may be unreliable.")
+            warned = True
+
+        result_row = row.to_dict()
+        result_row["ambiguous_bases"] = has_ambiguous_base
 
         if left_fwd and right_fwd:
             result_row.update({
@@ -437,9 +495,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": right_fwd,
                 "left_seq_actual": left_fwd_actual,
                 "right_seq_actual": right_fwd_actual,
-                "left_mismatch_map": left_fwd_mismatch_map,
-                "right_mismatch_map": right_fwd_mismatch_map,
-                "strand": "forward"
+                "left_mismatch_map": list(left_fwd_mismatch_map),
+                "right_mismatch_map": list(right_fwd_mismatch_map),
             })
         elif left_rev and right_rev:
             result_row.update({
@@ -447,19 +504,17 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": right_rev,
                 "left_seq_actual": left_rev_actual,
                 "right_seq_actual": right_rev_actual,
-                "left_mismatch_map": left_rev_mismatch_map,
-                "right_mismatch_map": right_rev_mismatch_map,
-                "strand": "reverse"
+                "left_mismatch_map": list(left_rev_mismatch_map),
+                "right_mismatch_map": list(right_rev_mismatch_map),
             })
         else:
             result_row.update({
                 "left_primer_loc": [],
                 "right_primer_loc": [],
-                "left_seq_actual": "none",
-                "right_seq_actual": "none",
-                "left_mismatch_map": "none",
-                "right_mismatch_map": "none",
-                "strand": "none"
+                "left_seq_actual": [],
+                "right_seq_actual": [],
+                "left_mismatch_map": [],
+                "right_mismatch_map": []
             })
 
         results.append(result_row)
