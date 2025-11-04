@@ -56,10 +56,9 @@ def validate_simulator_options(simulator, params_source):
 
     if simulator == "wgsim":
         if was_provided("mean_quality_begin") or \
-            was_provided("mean_quality_end"):
+                was_provided("mean_quality_end"):
             raise click.UsageError("--mean_quality_begin,"
-                                   "--mean_quality_end"
-                                   "are only"
+                                   "--mean_quality_end are only"
                                    "valid with simulator='mason'")
     elif simulator == "mason":
         for opt in ["standard_deviation",
