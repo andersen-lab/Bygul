@@ -174,9 +174,9 @@ def create_valid_primer_combinations(df):
     for i in range(len(df)):
         # Pair coordinates with their mismatch maps
         left_coords = zip(df.at[i, "left_primer_loc"],
-                               df.at[i, "left_mismatch_map"])
+                          df.at[i, "left_mismatch_map"])
         right_coords = zip(df.at[i, "right_primer_loc"],
-                                df.at[i, "right_mismatch_map"])
+                           df.at[i, "right_mismatch_map"])
         # Safe assignment using .at[]
         df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
                                                           right_coords)
@@ -437,7 +437,6 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                            for pos in left_fwd]
         right_fwd_actual = [reference_seq[pos:pos+len(primer_right)]
                             for pos in right_fwd]
-        
         left_fwd_mismatch_map = []
         left_fwd_has_ambig = []
         for seq in left_fwd_actual:
@@ -457,15 +456,15 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
         left_rev = str(Seq(primer_right).reverse_complement())
         pattern_left_rev = f"({left_rev}){{s<={maxmismatch}}}"
         pattern_right_rev = f"({right_rev}){{s<={maxmismatch}}}"
-                # Forward strand search
+        # Forward strand search
         left_rev_pos = [m.start() for m in re.finditer(pattern_left_rev,
-                                                   reference_seq,
-                                                   flags=re.IGNORECASE,
-                                                   overlapped=True)]
+                                                       reference_seq,
+                                                       flags=re.IGNORECASE,
+                                                       overlapped=True)]
         right_rev_pos = [m.start() for m in re.finditer(pattern_right_rev,
-                                                    reference_seq,
-                                                    flags=re.IGNORECASE,
-                                                    overlapped=True)]
+                                                        reference_seq,
+                                                        flags=re.IGNORECASE,
+                                                        overlapped=True)]
         left_rev_actual = [reference_seq[pos:pos+len(left_rev)]
                            for pos in left_rev_pos]
         right_rev_actual = [reference_seq[pos:pos+len(right_rev)]
@@ -556,7 +555,7 @@ def evaluate_matches(left_primer_coordinates, right_primer_coordinates):
     if left_primer_coordinates and right_primer_coordinates:
         valid_combinations = []
         combinations = itertools.product(left_primer_coordinates,
-                                              right_primer_coordinates)
+                                         right_primer_coordinates)
         for left, right in combinations:
             left_pos, left_mismatch_map = left
             right_pos, right_mismatch_map = right
