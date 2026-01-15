@@ -56,9 +56,11 @@ def validate_simulator_options(simulator, params_source):
 
     if simulator == "wgsim":
         if was_provided("mean_quality_begin") or \
-                was_provided("mean_quality_end"):
+            was_provided("mean_quality_end") or \
+                was_provided("indel_fraction"):
             raise click.UsageError("--mean_quality_begin,"
-                                   "--mean_quality_end are only"
+                                   "--mean_quality_end and"
+                                   "--indel_fraction are only"
                                    "valid with simulator='mason'")
     elif simulator == "mason":
         for opt in ["standard_deviation",
@@ -171,11 +173,10 @@ def create_valid_primer_combinations(df):
 
     for i in range(len(df)):
         # Pair coordinates with their mismatch maps
-        left_coords = list(zip(df.at[i, "left_primer_loc"],
-                               df.at[i, "left_mismatch_map"]))
-        right_coords = list(zip(df.at[i, "right_primer_loc"],
-                                df.at[i, "right_mismatch_map"]))
-
+        left_coords = zip(df.at[i, "left_primer_loc"],
+                          df.at[i, "left_mismatch_map"])
+        right_coords = zip(df.at[i, "right_primer_loc"],
+                           df.at[i, "right_mismatch_map"])
         # Safe assignment using .at[]
         df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
                                                           right_coords)
@@ -436,38 +437,50 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                            for pos in left_fwd]
         right_fwd_actual = [reference_seq[pos:pos+len(primer_right)]
                             for pos in right_fwd]
-
-        left_fwd_mismatch_map, left_fwd_has_ambig = zip(*[
-            mismatch_alignment(primer_left, seq) for seq in left_fwd_actual
-        ]) if left_fwd_actual else ([], [])
-
-        right_fwd_mismatch_map, right_fwd_has_ambig = zip(*[
-            mismatch_alignment(primer_right, seq) for seq in right_fwd_actual
-        ]) if right_fwd_actual else ([], [])
-
+        left_fwd_mismatch_map = []
+        left_fwd_has_ambig = []
+        for seq in left_fwd_actual:
+            aligned, has_ambig = mismatch_alignment(primer_left, seq)
+            left_fwd_mismatch_map.append(aligned)
+            left_fwd_has_ambig.append(has_ambig)
+        right_fwd_mismatch_map = []
+        right_fwd_has_ambig = []
+        for seq in right_fwd_actual:
+            aligned, has_ambig = mismatch_alignment(primer_right, seq)
+            right_fwd_mismatch_map.append(aligned)
+            right_fwd_has_ambig.append(has_ambig)
         # Reverse strand search
-        ref_rev = str(Seq(reference_seq).reverse_complement())
-        left_rev = [m.start() for m in re.finditer(pattern_left,
-                                                   ref_rev,
-                                                   flags=re.IGNORECASE,
-                                                   overlapped=True)]
-        right_rev = [m.start() for m in re.finditer(pattern_right,
-                                                    ref_rev,
-                                                    flags=re.IGNORECASE,
-                                                    overlapped=True)]
-
-        left_rev_actual = [ref_rev[pos:pos+len(primer_left)]
-                           for pos in left_rev]
-        right_rev_actual = [ref_rev[pos:pos+len(primer_right)]
-                            for pos in right_rev]
-
-        left_rev_mismatch_map, left_rev_has_ambig = zip(*[
-            mismatch_alignment(primer_left, seq) for seq in left_rev_actual
-        ]) if left_rev_actual else ([], [])
-
-        right_rev_mismatch_map, right_rev_has_ambig = zip(*[
-            mismatch_alignment(primer_right, seq) for seq in right_rev_actual
-        ]) if right_rev_actual else ([], [])
+        # get complimentary reverse of primers
+        # right and left primer change direction
+        right_rev = str(Seq(primer_left).reverse_complement())
+        left_rev = str(Seq(primer_right).reverse_complement())
+        pattern_left_rev = f"({left_rev}){{s<={maxmismatch}}}"
+        pattern_right_rev = f"({right_rev}){{s<={maxmismatch}}}"
+        # Forward strand search
+        left_rev_pos = [m.start() for m in re.finditer(pattern_left_rev,
+                                                       reference_seq,
+                                                       flags=re.IGNORECASE,
+                                                       overlapped=True)]
+        right_rev_pos = [m.start() for m in re.finditer(pattern_right_rev,
+                                                        reference_seq,
+                                                        flags=re.IGNORECASE,
+                                                        overlapped=True)]
+        left_rev_actual = [reference_seq[pos:pos+len(left_rev)]
+                           for pos in left_rev_pos]
+        right_rev_actual = [reference_seq[pos:pos+len(right_rev)]
+                            for pos in right_rev_pos]
+        left_rev_mismatch_map = []
+        left_rev_has_ambig = []
+        for seq in left_rev_actual:
+            aligned, has_ambig = mismatch_alignment(left_rev, seq)
+            left_rev_mismatch_map.append(aligned)
+            left_rev_has_ambig.append(has_ambig)
+        right_rev_mismatch_map = []
+        right_rev_has_ambig = []
+        for seq in right_rev_actual:
+            aligned, has_ambig = mismatch_alignment(right_rev, seq)
+            right_rev_mismatch_map.append(aligned)
+            right_rev_has_ambig.append(has_ambig)
 
         # Check if any ambiguous bases are in the primers or alignments
         has_ambiguous_base = any([
@@ -493,17 +506,17 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": right_fwd,
                 "left_seq_actual": left_fwd_actual,
                 "right_seq_actual": right_fwd_actual,
-                "left_mismatch_map": list(left_fwd_mismatch_map),
-                "right_mismatch_map": list(right_fwd_mismatch_map),
+                "left_mismatch_map": left_fwd_mismatch_map,
+                "right_mismatch_map": right_fwd_mismatch_map,
             })
-        elif left_rev and right_rev:
+        elif left_rev_pos and right_rev_pos:
             result_row.update({
-                "left_primer_loc": left_rev,
-                "right_primer_loc": right_rev,
+                "left_primer_loc": left_rev_pos,
+                "right_primer_loc": right_rev_pos,
                 "left_seq_actual": left_rev_actual,
                 "right_seq_actual": right_rev_actual,
-                "left_mismatch_map": list(left_rev_mismatch_map),
-                "right_mismatch_map": list(right_rev_mismatch_map),
+                "left_mismatch_map": left_rev_mismatch_map,
+                "right_mismatch_map": right_rev_mismatch_map,
             })
         else:
             result_row.update({
@@ -541,8 +554,8 @@ def evaluate_matches(left_primer_coordinates, right_primer_coordinates):
     """Find valid primer pairs that can produce an amplicon with mismatches."""
     if left_primer_coordinates and right_primer_coordinates:
         valid_combinations = []
-        combinations = list(itertools.product(left_primer_coordinates,
-                                              right_primer_coordinates))
+        combinations = itertools.product(left_primer_coordinates,
+                                         right_primer_coordinates)
         for left, right in combinations:
             left_pos, left_mismatch_map = left
             right_pos, right_mismatch_map = right
