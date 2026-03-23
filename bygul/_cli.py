@@ -53,6 +53,12 @@ def cli():
     help="Select the simulator to use (wgsim or mason)",
 )
 @click.option(
+    "--simulation_mode",
+    default="amplicon",
+    type=click.Choice(["amplicon", "metagenomics"], case_sensitive=False),
+    help="Select type of simulation",
+)
+@click.option(
     "--outerdistance", default=150,
     help="Outer distance for simulation using wgsim"
 )
