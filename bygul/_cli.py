@@ -157,7 +157,8 @@ def simulate_proportions(
     mean_quality_end,
     seed,
     standard_deviation,
-    redo
+    redo,
+    simulation_mode
 ):
     from bygul.utils import (
         preprocess_primers,
