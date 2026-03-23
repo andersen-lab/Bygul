@@ -78,7 +78,7 @@ class CommandLineTests(unittest.TestCase):
             --proportions 0.8,0.2 --redo"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
-    
+
     def test_simulation_with_metagenomics(self):
         os.system(
             "bygul simulate-proportions \

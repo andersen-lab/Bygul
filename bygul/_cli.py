@@ -181,7 +181,7 @@ def simulate_proportions(
         sys.exit(1)
     if simulation_mode == "amplicon" and reference == "NA":
         print("Reference file is required for simulation mode amplicon")
-        sys.exit(1)       
+        sys.exit(1)
     ctx = click.get_current_context()
     params_source = {
         k: ctx.get_parameter_source(k) ==
@@ -254,13 +254,14 @@ def simulate_proportions(
     if simulation_mode == "amplicon":
         df = preprocess_primers(primers, reference)
         print("Reading and preprocessing the primer file...")
-        with tqdm(total=len(sample_names), desc="Simulation progress...") as pbar:
+        with tqdm(total=len(sample_names),
+                  desc="Simulation progress...") as pbar:
             for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
                 genome_seq = next(SeqIO.parse(path, "fasta"))
                 print(f"Extracting amplicons for sample {name}...")
 
                 df = find_closest_primer_match(df, str(genome_seq.seq),
-                                            maxmismatch)
+                                               maxmismatch)
                 all_amplicons = create_valid_primer_combinations(df)
                 all_amplicons = all_amplicons.fillna(0)
                 all_amplicons["amplicon_length"] = np.where(
@@ -305,7 +306,9 @@ def simulate_proportions(
 
                 fasta_files = [
                     os.path.join(outdir, name, "amplicons", f)
-                    for f in os.listdir(os.path.join(outdir, name, "amplicons"))
+                    for f in os.listdir(os.path.join(outdir,
+                                                     name,
+                                                     "amplicons"))
                     if f.endswith(".fasta") or f.endswith(".fa")
                 ]
 
@@ -344,7 +347,8 @@ def simulate_proportions(
                 print("Finished!")
             pbar.update(1)
     else:
-        with tqdm(total=len(sample_names), desc="Simulation progress...") as pbar:
+        with tqdm(total=len(sample_names),
+                  desc="Simulation progress...") as pbar:
             for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
                 if not os.path.exists(os.path.join(outdir, name, "reads")):
                     os.makedirs(os.path.join(outdir, name, "reads"))

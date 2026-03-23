@@ -416,37 +416,37 @@ def run_simulation_on_fasta_single_genome(
     )
 
     if simulator == "wgsim":
-            command = [
-                "wgsim",
-                "-e",
-                str(error_rate),
-                "-r",
-                str(mutation_rate),
-                "-d",
-                str(outer_distance),
-                "-s",
-                str(sd),
-                "-N",
-                str(read_cnt),
-                "-R",
-                str(indel_fraction),
-                "-X",
-                str(indel_extend_probability),
-                "-1",
-                str(read_length),
-                "-2",
-                str(read_length),
-                fasta_file,
-                output1,
-                output2,
-            ]
-            if seed is not None:
-                command.extend(["-S", str(seed)])
+        command = [
+            "wgsim",
+            "-e",
+            str(error_rate),
+            "-r",
+            str(mutation_rate),
+            "-d",
+            str(outer_distance),
+            "-s",
+            str(sd),
+            "-N",
+            str(read_cnt),
+            "-R",
+            str(indel_fraction),
+            "-X",
+            str(indel_extend_probability),
+            "-1",
+            str(read_length),
+            "-2",
+            str(read_length),
+            fasta_file,
+            output1,
+            output2,
+        ]
+        if seed is not None:
+            command.extend(["-S", str(seed)])
             # Add the "-h" flag if haplotype is True
-            if haplotype:
-                command.append("-h")
+        if haplotype:
+            command.append("-h")
     else:
-            # Adjust Mason command
+        # Adjust Mason command
         command = [
             "mason_simulator",
             "-ir",
@@ -476,7 +476,7 @@ def run_simulation_on_fasta_single_genome(
             "--illumina-mismatch-quality-mean-begin",
             str(error_rate),
             "--illumina-mismatch-quality-mean-end",
-                str(error_rate),
+            str(error_rate),
         ]
         if seed is not None:
             command.extend(["--seed", str(seed)])
