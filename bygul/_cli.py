@@ -236,7 +236,7 @@ def simulate_proportions(
             proportions = [1]
         else:
             print(
-                "Read simulation proportions not"
+                "Read simulation proportions not "
                 "provided. Generating proportions randomly..."
             )
             proportions = generate_random_values(len(sample_names))
