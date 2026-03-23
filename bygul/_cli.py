@@ -16,8 +16,20 @@ def cli():
 
 @cli.command()
 @click.argument("genomes", type=str)
-@click.argument("primers", type=click.Path(exists=True))
-@click.argument("reference", type=click.Path(exists=True))
+@click.option(
+    "--reference",
+    default="NA",
+    help=(
+        "Reference used to generate the primer file"
+    )
+)
+@click.option(
+    "--primers",
+    default="NA",
+    help=(
+        "primers to use for amplicon sequencing in bed format"
+    ),
+)
 @click.option(
     "--proportions",
     default="NA",
