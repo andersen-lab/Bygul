@@ -389,6 +389,106 @@ def run_simulation_on_fasta(
         subprocess.call(command_merge, shell=True)
 
 
+def run_simulation_on_fasta_single_genome(
+    fasta_file,
+    output_dir,
+    read_length,
+    error_rate,
+    mutation_rate,
+    outer_distance,
+    read_cnt,
+    indel_fraction,
+    indel_extend_probability,
+    haplotype,
+    simulator,
+    mean_quality_begin,
+    mean_quality_end,
+    seed,
+    sd
+):
+    """Runs simulator on a single FASTA file with the given parameters."""
+
+    output1 = os.path.join(
+            output_dir, "reads_1.fastq"
+    )
+    output2 = os.path.join(
+            output_dir, "reads_2.fastq"
+    )
+
+    if simulator == "wgsim":
+            command = [
+                "wgsim",
+                "-e",
+                str(error_rate),
+                "-r",
+                str(mutation_rate),
+                "-d",
+                str(outer_distance),
+                "-s",
+                str(sd),
+                "-N",
+                str(read_cnt),
+                "-R",
+                str(indel_fraction),
+                "-X",
+                str(indel_extend_probability),
+                "-1",
+                str(read_length),
+                "-2",
+                str(read_length),
+                fasta_file,
+                output1,
+                output2,
+            ]
+            if seed is not None:
+                command.extend(["-S", str(seed)])
+            # Add the "-h" flag if haplotype is True
+            if haplotype:
+                command.append("-h")
+    else:
+            # Adjust Mason command
+        command = [
+            "mason_simulator",
+            "-ir",
+            fasta_file,
+            "-n",
+            str(read_cnt),
+            "-o",
+            output1,
+            "-or",
+            output2,
+            "--illumina-read-length",
+            str(read_length),
+            "--illumina-prob-insert",
+            str(indel_fraction),
+            "--illumina-prob-deletion",
+            str(indel_fraction),
+            "--illumina-prob-mismatch",
+            str(error_rate),
+            "--illumina-prob-mismatch-begin",
+            str(error_rate),
+            "--illumina-prob-mismatch-end",
+            str(error_rate),
+            "--illumina-quality-mean-begin",
+            str(mean_quality_begin),
+            "--illumina-quality-mean-end",
+            str(mean_quality_end),
+            "--illumina-mismatch-quality-mean-begin",
+            str(error_rate),
+            "--illumina-mismatch-quality-mean-end",
+                str(error_rate),
+        ]
+        if seed is not None:
+            command.extend(["--seed", str(seed)])
+
+        # Run the simulator command and capture any errors
+    try:
+        subprocess.run(
+            command, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while running the command: {e}")
+
+
 def find_closest_primer_match(df, reference_seq, maxmismatch):
     """
     For each row in df, find all left/right primer match positions (as lists),

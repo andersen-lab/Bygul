@@ -166,6 +166,7 @@ def simulate_proportions(
         make_amplicon,
         write_fasta_group,
         run_simulation_on_fasta,
+        run_simulation_on_fasta_single_genome,
         merge_fastq_files,
         find_closest_primer_match,
         generate_random_values,
