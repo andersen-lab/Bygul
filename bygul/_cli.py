@@ -173,6 +173,15 @@ def simulate_proportions(
         validate_simulator_options,
         assess_genome_quality_from_fasta
     )
+    if simulation_mode == "amplicon" and primers == "NA":
+        print("Primer file is required for simulation mode amplicon")
+        sys.exit(1)
+    if simulation_mode == "metagenomics" and primers != "NA":
+        print("Primer file not needed for metagenomics simulation")
+        sys.exit(1)
+    if simulation_mode == "amplicon" and reference == "NA":
+        print("Reference file is required for simulation mode amplicon")
+        sys.exit(1)       
     ctx = click.get_current_context()
     params_source = {
         k: ctx.get_parameter_source(k) ==
