@@ -299,9 +299,9 @@ def simulate_proportions(
                             outdir, name, "amplicons")
                     )
 
-            print("Starting read simulation...")
-            if not os.path.exists(os.path.join(outdir, name, "reads")):
-                os.makedirs(os.path.join(outdir, name, "reads"))
+                print("Starting read simulation...")
+                if not os.path.exists(os.path.join(outdir, name, "reads")):
+                    os.makedirs(os.path.join(outdir, name, "reads"))
 
                 fasta_files = [
                     os.path.join(outdir, name, "amplicons", f)
