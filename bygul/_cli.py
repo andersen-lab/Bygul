@@ -255,10 +255,13 @@ def simulate_proportions(
     if sum(proportions) != 1.0:
         raise Exception("Sum of all proportions should equal to 1.0!")
     read_cnts = [i * int(readcnt) for i in proportions]
-    with tqdm(total=len(sample_names), desc="Simulation progress...") as pbar:
-        for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
-            genome_seq = next(SeqIO.parse(path, "fasta"))
-            print(f"Extracting amplicons for sample {name}...")
+    if simulation_mode == "amplicon":
+        df = preprocess_primers(primers, reference)
+        print("Reading and preprocessing the primer file...")
+        with tqdm(total=len(sample_names), desc="Simulation progress...") as pbar:
+            for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
+                genome_seq = next(SeqIO.parse(path, "fasta"))
+                print(f"Extracting amplicons for sample {name}...")
 
             df = find_closest_primer_match(df, str(genome_seq.seq),
                                            maxmismatch)
