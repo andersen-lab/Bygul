@@ -14,7 +14,11 @@ def cli():
     pass
 
 
-@cli.command()
+@cli.command(context_settings=dict(
+    ignore_unknown_options=True,
+    allow_extra_args=True,
+))
+@click.pass_context
 @click.argument("genomes", type=str)
 @click.option(
     "--reference",
