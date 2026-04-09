@@ -9,7 +9,7 @@ import warnings
 
 
 @click.group(context_settings={"show_default": True})
-@click.version_option("2.0.0")
+@click.version_option("3.0.0")
 def cli():
     pass
 
