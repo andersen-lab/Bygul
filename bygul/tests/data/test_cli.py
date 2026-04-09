@@ -10,6 +10,10 @@ def file_exists(directory, filename):
 class CommandLineTests(unittest.TestCase):
     def test_version(self):
         os.system("bygul --version")
+    genomes = [
+        "bygul/tests/data/ATM-2FFMD73N3.fasta",
+        "bygul/tests/data/KR-SEARCH-120354.fasta"
+    ]
 
     def test_simulation(self):
         os.system(
@@ -53,39 +57,49 @@ class CommandLineTests(unittest.TestCase):
         os.system(
             "bygul simulate-proportions \
             bygul/tests/data/ATM-2FFMD73N3.fasta \
-            --primers bygul/tests/data/ARTIC_V4-1.bed --readlength 130 \
-            --reference bygul/tests/data/reference.fasta --redo"
+            --primers bygul/tests/data/ARTIC_V4-1.bed -1 130 \
+            -2 130 --reference bygul/tests/data/reference.fasta --redo"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
     def test_simulation_with_2genomes(self):
         os.system(
-            "bygul simulate-proportions \
-            bygul/tests/data/ATM-2FFMD73N3.fasta,\
-            bygul/tests/data/KR-SEARCH-120354.fasta \
-            --primers bygul/tests/data/ARTIC_V4-1.bed \
-            --reference bygul/tests/data/reference.fasta --redo"
+            "bygul simulate-proportions "
+            "bygul/tests/data/ATM-2FFMD73N3.fasta,"
+            "bygul/tests/data/KR-SEARCH-120354.fasta "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
+            "--reference bygul/tests/data/reference.fasta --redo"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
     def test_simulation_with_2genomes_proportions(self):
         os.system(
-            "bygul simulate-proportions \
-            bygul/tests/data/ATM-2FFMD73N3.fasta,\
-            bygul/tests/data/KR-SEARCH-120354.fasta \
-            --primers bygul/tests/data/ARTIC_V4-1.bed \
-            --reference bygul/tests/data/reference.fasta \
-            --proportions 0.8,0.2 --redo"
+            "bygul simulate-proportions "
+            "bygul/tests/data/ATM-2FFMD73N3.fasta,"
+            "bygul/tests/data/KR-SEARCH-120354.fasta "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
+            "--reference bygul/tests/data/reference.fasta "
+            "--proportions 0.8,0.2 --redo"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
     def test_simulation_with_metagenomics(self):
         os.system(
-            "bygul simulate-proportions \
-            bygul/tests/data/ATM-2FFMD73N3.fasta,\
-            bygul/tests/data/KR-SEARCH-120354.fasta \
-            --simulation_mode metagenomics \
-            --proportions 0.8,0.2 --redo"
+            "bygul simulate-proportions "
+            "bygul/tests/data/ATM-2FFMD73N3.fasta,"
+            "bygul/tests/data/KR-SEARCH-120354.fasta "
+            "--simulation_mode metagenomics "
+            "--proportions 0.8,0.2 --redo -1 150 -2 150"
+        )
+        self.assertTrue(file_exists(".", "results/reads_1.fastq"))
+
+    def test_simulation_with_mason(self):
+        os.system(
+            "bygul simulate-proportions "
+            "bygul/tests/data/ATM-2FFMD73N3.fasta,"
+            "bygul/tests/data/KR-SEARCH-120354.fasta "
+            "--proportions 0.8,0.2 --redo --simulator mason "
+            "--illumina-read-length 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
