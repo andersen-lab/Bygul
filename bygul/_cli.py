@@ -63,67 +63,6 @@ def cli():
     help="Select type of simulation",
 )
 @click.option(
-    "--outerdistance", default=150,
-    help="Outer distance for simulation using wgsim"
-)
-@click.option("--seed", default=None, type=int, help="seed for simulation")
-@click.option("--readcnt", default=500, help="Number of reads per amplicon")
-@click.option("--read_length", default=150, help="Read length for simulation")
-@click.option(
-    "--error_rate",
-    default=0.004,
-    type=float,
-    show_default=True,
-    help="Base error rate (e.g., 0.02)"
-    " for simulation using both wgsim and mason",
-)
-@click.option(
-    "--standard_deviation",
-    default=50,
-    type=int,
-    show_default=True,
-    help="Standard deviation"
-    " of insert size for wgsim",
-)
-@click.option(
-    "--mean_quality_begin",
-    default=40,
-    type=float,
-    show_default=True,
-    help="Mean sequence quality in beginning"
-    " of the read for mason simulator only",
-)
-@click.option(
-    "--mean_quality_end",
-    default=39.5,
-    type=float,
-    show_default=True,
-    help="Mean sequence quality in end of the read for mason simulator only",
-)
-@click.option(
-    "--mutation_rate",
-    default=0.001,
-    type=float,
-    show_default=True,
-    help="Mutation rate (e.g., 0.001) for simulation for wgsim",
-)
-@click.option(
-    "--indel_fraction",
-    default=0.00005,
-    type=float,
-    show_default=True,
-    help="Fraction of indels (e.g., 0.15) for simulation,"
-    "this will be both insertion and deletion probablity for mason",
-)
-@click.option(
-    "--indel_extend_probability",
-    default=0.00005,
-    type=float,
-    show_default=True,
-    help="Probability an indel is extended"
-    " (e.g., 0.3)for simulation for wgsim",
-)
-@click.option(
     "--maxmismatch",
     default=1,
     show_default=True,
@@ -147,20 +86,9 @@ def simulate_proportions(
     reference,
     primers,
     outdir,
-    read_length,
-    error_rate,
-    mutation_rate,
-    outerdistance,
     readcnt,
-    indel_fraction,
-    indel_extend_probability,
     maxmismatch,
-    haplotype,
     simulator,
-    mean_quality_begin,
-    mean_quality_end,
-    seed,
-    standard_deviation,
     redo,
     simulation_mode
 ):
@@ -323,19 +251,10 @@ def simulate_proportions(
                     run_simulation_on_fasta(
                         fasta_file,
                         os.path.join(outdir, name, "reads"),
-                        read_length,
-                        error_rate,
-                        mutation_rate,
-                        outerdistance,
                         cnt,
-                        indel_fraction,
-                        indel_extend_probability,
-                        haplotype,
                         simulator,
-                        mean_quality_begin,
-                        mean_quality_end,
-                        seed,
-                        standard_deviation
+                        wgsim_insert_size,
+                        extra_flags=extra_simulator_flags
                     )
                 read_path1 = os.path.join(
                     os.path.abspath(outdir), name, "reads/merged_reads_1.fastq"
@@ -362,19 +281,9 @@ def simulate_proportions(
                 run_simulation_on_fasta_single_genome(
                         path,
                         os.path.join(outdir, name, "reads"),
-                        read_length,
-                        error_rate,
-                        mutation_rate,
-                        outerdistance,
                         cnt,
-                        indel_fraction,
-                        indel_extend_probability,
-                        haplotype,
                         simulator,
-                        mean_quality_begin,
-                        mean_quality_end,
-                        seed,
-                        standard_deviation
+                        extra_flags=extra_simulator_flags
                     )
                 read_path1 = os.path.join(
                     os.path.abspath(outdir), name, "reads/reads_1.fastq"
