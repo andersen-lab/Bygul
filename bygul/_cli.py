@@ -104,7 +104,6 @@ def simulate_proportions(
         merge_fastq_files,
         find_closest_primer_match,
         generate_random_values,
-        validate_simulator_options,
         assess_genome_quality_from_fasta
     )
     extra_simulator_flags = ctx.args
@@ -121,13 +120,6 @@ def simulate_proportions(
         print("Reference file is required for simulation mode amplicon")
         sys.exit(1)
     ctx = click.get_current_context()
-    params_source = {
-        k: ctx.get_parameter_source(k) ==
-        click.core.ParameterSource.COMMANDLINE
-        for k in ctx.params
-    }
-    # Run validation
-    validate_simulator_options(simulator, params_source)
     if os.path.exists(outdir):
         if not redo:
             print(f"Directory '{outdir}'"
