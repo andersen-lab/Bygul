@@ -55,7 +55,7 @@ bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --ref
 
 Simulate reads with additional parameters such as base error rate, read length and indels fraction
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --readcnt 1000 --error_rate 0.001 --read_length 400 --indel_fraction 0.001
+bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --readcnt 1000 -e 0.001 -1 400 -2 400 -R 0.01
  ```
 ## Notes
 #### Number of reads per amplicon
@@ -63,7 +63,7 @@ It is recommended to define the number of reads per amplicon to be greater than 
 #### Primer bed file
 Please remember that the primer file must contain a column containing primer sequence. The maximum number of mismatches allowed for each primer sequence is 1 SNP. To change this number, you may use the `--maxmismatches` flag.
 #### Complete set of available parameters
-To learn more about how to adjust other parameters use `bygul simulate-proportions --help`
+To learn more about how to adjust other parameters for the simulator please read the documentation for wgsim and mason simulator. Users can pass any simulator parameter directly in their command. The only parameters set through bygul are `--readcnt` and `--wgsim_insert_size` for amplicon sequencing mode.
 #### Simulated reads output
 Simulated reads from all samples are located in `provided_output_path/reads.fastq`
 #### Information about amplicon dropouts
@@ -79,7 +79,7 @@ Simulate reads from different samples without defining proportions (will be assi
 bygul simulate-proportions sample.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
  ```
 
-Specify proportions for each sample.
+Specify proportions for each sample and add other simulator specific parameters. To access simulator parameters, please read wgsim and mason documentation.
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics
+bygul simulate-proportions sample.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
  ```
