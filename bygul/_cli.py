@@ -69,11 +69,11 @@ def cli():
     help="Maximum number of mismatches allowed in primer region",
 )
 @click.option(
-    "--haplotype",
-    is_flag=True,
-    default=True,
-    help="use this to simulate reads for a haploid organism for wgsim",
+    "--wgsim_insert_size", default=150,
+    help="Outer distance for simulation using wgsim in amplicon"
+    "simulation mode."
 )
+@click.option("--readcnt", default=500, help="Number of reads per amplicon")
 @click.option(
     "--redo",
     is_flag=True,
@@ -81,10 +81,12 @@ def cli():
     help="Overwrite the output directory if it already exists.",
 )
 def simulate_proportions(
+    ctx,
     genomes,
     proportions,
     reference,
     primers,
+    wgsim_insert_size,
     outdir,
     readcnt,
     maxmismatch,
@@ -105,6 +107,7 @@ def simulate_proportions(
         validate_simulator_options,
         assess_genome_quality_from_fasta
     )
+    extra_simulator_flags = ctx.args
     if simulation_mode == "amplicon" and primers == "NA":
         print("Primer file is required for simulation mode amplicon")
         sys.exit(1)
