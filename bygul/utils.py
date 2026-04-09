@@ -239,19 +239,10 @@ def count_contigs(fasta_file):
 def run_simulation_on_fasta(
     fasta_file,
     output_dir,
-    read_length,
-    error_rate,
-    mutation_rate,
-    outer_distance,
     read_cnt,
-    indel_fraction,
-    indel_extend_probability,
-    haplotype,
     simulator,
-    mean_quality_begin,
-    mean_quality_end,
-    seed,
-    sd
+    wgsim_insert_size,
+    extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
     # Count the number of contigs in the FASTA file
@@ -285,33 +276,17 @@ def run_simulation_on_fasta(
         if simulator == "wgsim":
             command = [
                 "wgsim",
-                "-e",
-                str(error_rate),
-                "-r",
-                str(mutation_rate),
-                "-d",
-                str(outer_distance),
-                "-s",
-                str(sd),
                 "-N",
                 str(reads_per_contig),
-                "-R",
-                str(indel_fraction),
-                "-X",
-                str(indel_extend_probability),
-                "-1",
-                str(read_length),
-                "-2",
-                str(read_length),
+                "-d",
+                str(wgsim_insert_size),
                 fasta_file,
                 output1,
                 output2,
             ]
-            if seed is not None:
-                command.extend(["-S", str(seed)])
-            # Add the "-h" flag if haplotype is True
-            if haplotype:
-                command.append("-h")
+            if extra_flags:
+                command.extend(extra_flags)
+
         else:
             # Adjust Mason command
             command = [
@@ -324,30 +299,9 @@ def run_simulation_on_fasta(
                 output1,
                 "-or",
                 output2,
-                "--illumina-read-length",
-                str(read_length),
-                "--illumina-prob-insert",
-                str(indel_fraction),
-                "--illumina-prob-deletion",
-                str(indel_fraction),
-                "--illumina-prob-mismatch",
-                str(error_rate),
-                "--illumina-prob-mismatch-begin",
-                str(error_rate),
-                "--illumina-prob-mismatch-end",
-                str(error_rate),
-                "--illumina-quality-mean-begin",
-                str(mean_quality_begin),
-                "--illumina-quality-mean-end",
-                str(mean_quality_end),
-                "--illumina-mismatch-quality-mean-begin",
-                str(error_rate),
-                "--illumina-mismatch-quality-mean-end",
-                str(error_rate),
             ]
-            if seed is not None:
-                command.extend(["--seed", str(seed)])
-
+            if extra_flags:
+                command.extend(extra_flags)
         # Run the simulator command and capture any errors
         try:
             subprocess.run(
@@ -363,19 +317,9 @@ def run_simulation_on_fasta(
 def run_simulation_on_fasta_single_genome(
     fasta_file,
     output_dir,
-    read_length,
-    error_rate,
-    mutation_rate,
-    outer_distance,
     read_cnt,
-    indel_fraction,
-    indel_extend_probability,
-    haplotype,
     simulator,
-    mean_quality_begin,
-    mean_quality_end,
-    seed,
-    sd
+    extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
 
@@ -389,33 +333,14 @@ def run_simulation_on_fasta_single_genome(
     if simulator == "wgsim":
         command = [
             "wgsim",
-            "-e",
-            str(error_rate),
-            "-r",
-            str(mutation_rate),
-            "-d",
-            str(outer_distance),
-            "-s",
-            str(sd),
             "-N",
             str(read_cnt),
-            "-R",
-            str(indel_fraction),
-            "-X",
-            str(indel_extend_probability),
-            "-1",
-            str(read_length),
-            "-2",
-            str(read_length),
             fasta_file,
             output1,
             output2,
         ]
-        if seed is not None:
-            command.extend(["-S", str(seed)])
-            # Add the "-h" flag if haplotype is True
-        if haplotype:
-            command.append("-h")
+        if extra_flags:
+            command.extend(extra_flags)
     else:
         # Adjust Mason command
         command = [
@@ -428,31 +353,10 @@ def run_simulation_on_fasta_single_genome(
             output1,
             "-or",
             output2,
-            "--illumina-read-length",
-            str(read_length),
-            "--illumina-prob-insert",
-            str(indel_fraction),
-            "--illumina-prob-deletion",
-            str(indel_fraction),
-            "--illumina-prob-mismatch",
-            str(error_rate),
-            "--illumina-prob-mismatch-begin",
-            str(error_rate),
-            "--illumina-prob-mismatch-end",
-            str(error_rate),
-            "--illumina-quality-mean-begin",
-            str(mean_quality_begin),
-            "--illumina-quality-mean-end",
-            str(mean_quality_end),
-            "--illumina-mismatch-quality-mean-begin",
-            str(error_rate),
-            "--illumina-mismatch-quality-mean-end",
-            str(error_rate),
         ]
-        if seed is not None:
-            command.extend(["--seed", str(seed)])
-
-        # Run the simulator command and capture any errors
+        if extra_flags:
+            command.extend(extra_flags)
+    # Run the simulator command and capture any errors
     try:
         subprocess.run(
             command, check=True, capture_output=True, text=True)
