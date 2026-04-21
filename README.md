@@ -6,7 +6,7 @@
 
 ## 🏗 Installation
 
-Bygul requires **Python 3**. Since it relies on external simulators (`wgsim` and `mason`), we recommend using Conda to manage dependencies.
+Bygul requires **Python 3**. Since it relies on external simulators (`wgsim` and `mason`), we recommend using Conda to manage dependencies.For more info on <a href="https://github.com/lh3/wgsim">wgsim</a> and <a href="https://github.com/seqan/seqan/blob/main/apps/mason2/README.mason_simulator">mason simulator</a> please check their documentations.
 
 ### Option 1: Via Conda (Recommended)
 ```bash
@@ -33,26 +33,25 @@ Use this mode when simulating specific genomic regions defined by a primer set.
 
 ### Basic Command
 ```bash
-bygul simulate-proportions [SAMPLES.fasta] --primers [primer.bed] --reference [ref.fasta] --proportions [0.8,0.2] --outdir [output_dir]
+bygul simulate-proportions [SAMPLE1.fasta,SAMPLE2.fasta] --primers [primer.bed] --reference [reference.fasta] --proportions [0.8,0.2] --outdir [output_dir]
 ```
 
 ### Advanced Examples
 * **Random Proportions & Mismatches:**
     Simulate with random proportions and allow up to 2 SNPs in primer regions.
     ```bash
-    bygul simulate-proportions s1.fasta,s2.fasta --primers p.bed --reference r.fasta --outdir results/ --maxmismatch 2
+    bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
     ```
 * **Switching Simulators:**
     Use `mason` instead of the default `wgsim`.
     ```bash
-    bygul simulate-proportions s1.fasta,s2.fasta --primers p.bed --reference r.fasta --simulator mason
+    bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --simulator mason
     ```
 * **Custom Error Rates & Lengths:**
-    Pass simulator-specific parameters (e.g., error rate `-e`, read lengths `-1` and `-2`, indel fraction `-R`) directly.
+    Pass simulator-specific parameters (e.g. indel fraction `-R`) directly.
     ```bash
-    bygul simulate-proportions s1.fasta,s2.fasta --primers p.bed --reference r.fasta -e 0.001 -1 400 -2 400 -R 0.01
+    bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta -R 0.01
     ```
-
 ---
 
 ## 🌍 Usage: Metagenomics Mode
@@ -60,12 +59,12 @@ Simulate reads from entire samples without requiring a primer BED file or a refe
 
 ### Basic Metagenomics Simulation
 ```bash
-bygul simulate-proportions s1.fasta,s2.fasta --outdir results/ --simulation_mode metagenomics
+bygul simulate-proportions sample1.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
 ```
 
 ### Metagenomics with Specific Parameters
 ```bash
-bygul simulate-proportions s1.fasta,s2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
+bygul simulate-proportions sample1.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
 ```
 
 ---
@@ -73,7 +72,7 @@ bygul simulate-proportions s1.fasta,s2.fasta --proportions 0.5,0.5 --outdir resu
 ## 📝 Technical Notes
 
 ### Parameter Handling
-Bygul acts as a wrapper. While most flags are passed directly to the underlying simulators, the following are managed directly by Bygul for better realism:
+Bygul acts as a wrapper. While most flags are passed directly to the underlying simulators, the following are managed directly by Bygul for more realistic simulations(amplicon simulation mode only):
 - `--readcnt`: Number of reads per amplicon.
 - `--wgsim_insert_size`: Insert size for wgsim.
 - `--wgsim_read_length` / `--wgsim_error_rate`.
@@ -91,7 +90,7 @@ mason_simulator --help
 ### Output Files
 * **Consolidated Reads:** Simulated reads from all samples are at `outdir/reads.fastq`.
 * **Proportions:** Assigned proportions are recorded in `results/sample_proportions.txt`.
-* **Quality Metrics:** Check `outdir/[sample_name]/amplicon_stats.csv` for information on **amplicon dropouts**, mismatches, and ambiguous bases.
+* **Quality Metrics:** Check `outdir/[sample_name]/amplicon_stats.csv` for information on amplicon dropouts, mismatches, and ambiguous bases.
 
 ---
 
