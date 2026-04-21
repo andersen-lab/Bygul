@@ -73,6 +73,16 @@ def cli():
     help="Outer distance for simulation using wgsim in amplicon"
     "simulation mode."
 )
+@click.option(
+    "--wgsim_read_length", default=150,
+    help="Read length for simulation using wgsim in amplicon"
+    "simulation mode."
+)
+@click.option(
+    "--wgsim_error_rate", default=0.0001,
+    help="Error rate for simulation using wgsim in amplicon"
+    "simulation mode."
+)
 @click.option("--readcnt", default=500, help="Number of reads per amplicon")
 @click.option(
     "--redo",
@@ -87,6 +97,8 @@ def simulate_proportions(
     reference,
     primers,
     wgsim_insert_size,
+    wgsim_read_length,
+    wgsim_error_rate,
     outdir,
     readcnt,
     maxmismatch,
@@ -249,6 +261,8 @@ def simulate_proportions(
                         cnt,
                         simulator,
                         wgsim_insert_size,
+                        wgsim_read_length,
+                        wgsim_error_rate,
                         extra_flags=extra_simulator_flags
                     )
                 read_path1 = os.path.join(

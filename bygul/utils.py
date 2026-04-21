@@ -244,6 +244,8 @@ def run_simulation_on_fasta(
     read_cnt,
     simulator,
     wgsim_insert_size,
+    wgsim_read_length,
+    wgsim_error_rate,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -282,6 +284,12 @@ def run_simulation_on_fasta(
                 str(reads_per_contig),
                 "-d",
                 str(wgsim_insert_size),
+                "-e",
+                str(wgsim_error_rate),
+                "-1",
+                str(wgsim_read_length),
+                "-2",
+                str(wgsim_read_length),
                 fasta_file,
                 output1,
                 output2,
