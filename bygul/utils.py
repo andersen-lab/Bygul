@@ -198,7 +198,9 @@ def preprocess_primers(primer_file, reference):
         "primer_seq",
     ]
     # read the primer bed file
-    primer_bed = pd.read_csv(primer_file, sep="\t", names=col_names)
+    primer_bed = pd.read_csv(primer_file, sep="\t",
+                            names=col_names,
+                            comment='#')
     primer_bed = validate_primer_bed(primer_bed)
     primer_bed["primer_seq"] = primer_bed.apply(
         lambda row: extract_sequence(
