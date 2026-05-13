@@ -145,25 +145,25 @@ def create_valid_primer_combinations(df):
     for i in range(len(df)):
         # Pair coordinates with their mismatch maps
         left_coords = zip(df.at[i, "left_primer_loc"],
-                          df.at[i, "left_mismatch_map"])
+                          df.at[i, "left_match"])
         right_coords = zip(df.at[i, "right_primer_loc"],
-                           df.at[i, "right_mismatch_map"])
+                           df.at[i, "right_match"])
         # Safe assignment using .at[]
         df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
                                                           right_coords)
         for (
             primer_start,
             primer_end,
-            left_mismatch_map,
-            right_mismatch_map
+            left_match,
+            right_match
         ) in df.at[i, "valid_combinations"]:
             valid_primers.append(
                 {
                     "amplicon_number": df.at[i, "amplicon_number"],
                     "primer_start": primer_start,
                     "primer_end": primer_end,
-                    "left_mismatch_map": left_mismatch_map,
-                    "right_mismatch_map": right_mismatch_map
+                    "left_match": left_match,
+                    "right_match": right_match
                 }
             )
 
@@ -481,8 +481,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": right_fwd,
                 "left_seq_actual": left_fwd_actual,
                 "right_seq_actual": right_fwd_actual,
-                "left_mismatch_map": left_fwd_mismatch_map,
-                "right_mismatch_map": right_fwd_mismatch_map,
+                "left_match": left_fwd_mismatch_map,
+                "right_match": right_fwd_mismatch_map,
             })
         elif left_rev_pos and right_rev_pos:
             result_row.update({
@@ -490,8 +490,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": right_rev_pos,
                 "left_seq_actual": left_rev_actual,
                 "right_seq_actual": right_rev_actual,
-                "left_mismatch_map": left_rev_mismatch_map,
-                "right_mismatch_map": right_rev_mismatch_map,
+                "left_match": left_rev_mismatch_map,
+                "right_match": right_rev_mismatch_map,
             })
         else:
             result_row.update({
@@ -499,8 +499,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": [],
                 "left_seq_actual": [],
                 "right_seq_actual": [],
-                "left_mismatch_map": [],
-                "right_mismatch_map": []
+                "left_match": [],
+                "right_match": []
             })
 
         results.append(result_row)
@@ -532,15 +532,15 @@ def evaluate_matches(left_primer_coordinates, right_primer_coordinates):
         combinations = itertools.product(left_primer_coordinates,
                                          right_primer_coordinates)
         for left, right in combinations:
-            left_pos, left_mismatch_map = left
-            right_pos, right_mismatch_map = right
+            left_pos, left_match = left
+            right_pos, right_match = right
             amplicon_length = right_pos - left_pos
 
             if 0 < amplicon_length <= 2000:
                 valid_combinations.append(
                     (left_pos, right_pos,
-                     left_mismatch_map,
-                     right_mismatch_map)
+                     left_match,
+                     right_match)
                 )
 
         return valid_combinations
