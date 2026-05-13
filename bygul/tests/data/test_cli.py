@@ -103,6 +103,15 @@ class CommandLineTests(unittest.TestCase):
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
+    def test_check_primers(self):
+        os.system(
+            "bygul check-primers "
+            "bygul/tests/data/ATM-2FFMD73N3.fasta "
+            "bygul/tests/data/ARTIC_V4-1.bed "
+            "bygul/tests/data/reference.fasta"
+        )
+        self.assertTrue(file_exists(".", "amplicon_stats.csv"))
+
 
 if __name__ == "__main__":
     unittest.main()
