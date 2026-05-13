@@ -3,6 +3,7 @@ from Bio import SeqIO
 import click
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 import sys
 import shutil
 import warnings
@@ -296,6 +297,61 @@ def simulate_proportions(
                 print("Finished!")
             pbar.update(1)
 
+
+@cli.command()
+@click.argument("genomes", type=str)
+@click.argument(
+    "primers", type=str
+)
+@click.argument("reference", type=str)
+@click.option(
+    "--maxmismatch",
+    default=1,
+    show_default=True,
+    help="Maximum number of mismatches allowed in primer region",
+)
+
+def check_primers(genomes, primers, reference, maxmismatch):
+    from bygul.utils import (
+        assess_genome_quality_from_fasta,
+        preprocess_primers,
+        find_closest_primer_match,
+        create_valid_primer_combinations,
+    )
+
+    assess_genome_quality_from_fasta(genomes)
+    primer_df = preprocess_primers(primers,reference)
+    print("Reading and preprocessing the primer file...")
+    all_results = []
+
+    # Parse ALL sequences in the multifasta
+    for genome_record in SeqIO.parse(genomes, "fasta"):
+        genome_id = genome_record.id
+        genome_seq = str(genome_record.seq)
+        df = find_closest_primer_match(primer_df, genome_seq,
+                                               maxmismatch)
+        all_amplicons = create_valid_primer_combinations(df)
+        all_amplicons = all_amplicons.fillna(0)
+        all_amplicons["amplicon_length"] = np.where(
+                    (all_amplicons["primer_start"] != 0)
+                    & (all_amplicons["primer_end"] != 0),
+                    all_amplicons["primer_end"]
+                    - all_amplicons["primer_start"]
+                    + all_amplicons["primer_seq_y"].str.len(),
+                    0,
+                )
+        all_amplicons["genome_id"] = genome_id
+
+        all_results.append(all_amplicons)
+        # Combine results from all fasta entries
+    if all_results:
+        final_df = pd.concat(all_results, ignore_index=True)
+    else:
+        final_df = pd.DataFrame()
+    final_df.to_csv(
+        os.path.join("amplicon_stats.csv"),
+        index=False,
+    )
 
 if __name__ == "__main__":
     cli()
