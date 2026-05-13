@@ -35,6 +35,14 @@ You need to install them using conda or build from source.
 ## Example commands
 
 Run the tool using the following command.
+
+If you are just checking your primers without wanting to run the simulation, you can provide a multi-fasta file including all the sequences along with the primer file and the reference used to generate the primer file. This will create amplicon_stats.csv file as described below.
+
+ ```
+bygul check-primers sequences.fasta primer.bed reference.fasta
+ ```
+
+Example simualtion command
  ```
 bygul simulate-proportions [SAMPLE1.fasta,SAMPLE2.fasta,..] --primers [primer.bed] --reference [reference.fasta] --proportions [0.8,0.2,..] --outdir [output_directory]
  ```
