@@ -310,7 +310,6 @@ def simulate_proportions(
     show_default=True,
     help="Maximum number of mismatches allowed in primer region",
 )
-
 def check_primers(genomes, primers, reference, maxmismatch):
     from bygul.utils import (
         assess_genome_quality_from_fasta,
@@ -320,7 +319,7 @@ def check_primers(genomes, primers, reference, maxmismatch):
     )
 
     assess_genome_quality_from_fasta(genomes)
-    primer_df = preprocess_primers(primers,reference)
+    primer_df = preprocess_primers(primers, reference)
     print("Reading and preprocessing the primer file...")
     all_results = []
 
@@ -329,7 +328,7 @@ def check_primers(genomes, primers, reference, maxmismatch):
         genome_id = genome_record.id
         genome_seq = str(genome_record.seq)
         df = find_closest_primer_match(primer_df, genome_seq,
-                                               maxmismatch)
+                                       maxmismatch)
         all_amplicons = create_valid_primer_combinations(df)
         all_amplicons = all_amplicons.fillna(0)
         all_amplicons["amplicon_length"] = np.where(
@@ -352,6 +351,7 @@ def check_primers(genomes, primers, reference, maxmismatch):
         os.path.join("amplicon_stats.csv"),
         index=False,
     )
+
 
 if __name__ == "__main__":
     cli()
