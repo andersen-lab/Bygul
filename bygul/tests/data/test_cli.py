@@ -10,10 +10,6 @@ def file_exists(directory, filename):
 class CommandLineTests(unittest.TestCase):
     def test_version(self):
         os.system("bygul --version")
-    genomes = [
-        "bygul/tests/data/ATM-2FFMD73N3.fasta",
-        "bygul/tests/data/KR-SEARCH-120354.fasta"
-    ]
 
     def test_simulation(self):
         os.system(
