@@ -10,10 +10,6 @@ def file_exists(directory, filename):
 class CommandLineTests(unittest.TestCase):
     def test_version(self):
         os.system("bygul --version")
-    genomes = [
-        "bygul/tests/data/ATM-2FFMD73N3.fasta",
-        "bygul/tests/data/KR-SEARCH-120354.fasta"
-    ]
 
     def test_simulation(self):
         os.system(
@@ -102,6 +98,15 @@ class CommandLineTests(unittest.TestCase):
             "--illumina-read-length 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
+
+    def test_check_primers(self):
+        os.system(
+            "bygul check-primers "
+            "bygul/tests/data/ATM-2FFMD73N3.fasta "
+            "bygul/tests/data/ARTIC_V4-1.bed "
+            "bygul/tests/data/reference.fasta"
+        )
+        self.assertTrue(file_exists(".", "amplicon_stats.csv"))
 
 
 if __name__ == "__main__":

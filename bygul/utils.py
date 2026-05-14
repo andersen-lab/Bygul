@@ -9,6 +9,102 @@ import itertools
 import numpy as np
 import regex as re
 import warnings
+import sys
+import shutil
+
+
+def process_sample_proportions(
+    proportions,
+    sample_names,
+    sample_paths,
+    outdir
+):
+    """
+    Processes sample proportions for read simulation.
+
+    Parameters:
+        proportions (str or list): Either "NA" or comma-separated proportions.
+        sample_names (list): List of sample names.
+        sample_paths (list): List of sample file paths.
+        outdir (str): Output directory.
+
+    Returns:
+        list: Processed proportions as floats.
+    """
+
+    if proportions == "NA":
+        if len(sample_names) == 1:
+            print(
+                "Only one sample provided. "
+                "Using 1.0 as the sample proportion."
+            )
+            proportions = [1.0]
+
+        else:
+            print(
+                "Read simulation proportions not provided. "
+                "Generating proportions randomly..."
+            )
+
+            proportions = generate_random_values(len(sample_names))
+
+            with open(
+                os.path.join(outdir, "sample_proportions.txt"),
+                "w"
+            ) as file:
+                for name, proportion in zip(sample_names, proportions):
+                    file.write(f"{name}: {proportion}\n")
+
+    else:
+        proportions = list(map(float, str(proportions).split(",")))
+
+    # Validate lengths
+    if not (
+        len(sample_names) ==
+        len(proportions) ==
+        len(sample_paths)
+    ):
+        raise Exception(
+            "Number of samples, proportions, and sample paths should match!"
+        )
+
+    # Validate proportions sum
+    if round(sum(proportions), 6) != 1.0:
+        raise Exception(
+            "Sum of all proportions should equal 1.0!"
+        )
+
+    return proportions
+
+
+def check_dir(outdir, redo):
+    if os.path.exists(outdir):
+        if not redo:
+            print(f"Directory '{outdir}'"
+                  "already exists. Use --redo to overwrite.")
+            sys.exit(1)
+        else:
+            print(f"Directory '{outdir}' exists. Removing and"
+                  "recreating because --redo was set.")
+            shutil.rmtree(outdir)
+            os.makedirs(outdir)
+    else:
+        os.makedirs(outdir)
+
+
+def validate_simulation_args(simulation_mode, primers, reference):
+    if simulation_mode == "amplicon" and primers == "NA":
+        print("Primer file is required for simulation mode amplicon")
+        sys.exit(1)
+    if simulation_mode == "metagenomics" and primers != "NA":
+        print("Primer file not needed for metagenomics simulation")
+        sys.exit(1)
+    if simulation_mode == "metagenomics" and reference != "NA":
+        print("Reference file not needed for metagenomics simulation")
+        sys.exit(1)
+    if simulation_mode == "amplicon" and reference == "NA":
+        print("Reference file is required for simulation mode amplicon")
+        sys.exit(1)
 
 
 def assess_genome_quality_from_fasta(fasta_path):
@@ -16,6 +112,8 @@ def assess_genome_quality_from_fasta(fasta_path):
     Parses a FASTA genome file and assesses quality by:
     - Counting ambiguous (non-ACGT) bases.
     - Reporting the length of each contig.
+    - Emitting warnings for ambiguous bases or multiple contigs.
+    - Printing a genome quality summary.
 
     Parameters:
         fasta_path (str): Path to the FASTA file.
@@ -26,6 +124,7 @@ def assess_genome_quality_from_fasta(fasta_path):
             'contig_lengths': dict of {contig_id: length}
         }
     """
+
     ambiguous_bases = {'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N'}
     total_ambiguous = 0
     contig_lengths = {}
@@ -35,10 +134,37 @@ def assess_genome_quality_from_fasta(fasta_path):
         contig_lengths[record.id] = len(seq)
         total_ambiguous += sum(1 for base in seq if base in ambiguous_bases)
 
-    return {
+    report = {
         'total_ambiguous_bases': total_ambiguous,
         'contig_lengths': contig_lengths
     }
+
+    num_contigs = len(report['contig_lengths'])
+    num_ambiguous = report['total_ambiguous_bases']
+
+    # Warnings
+    if num_ambiguous > 0:
+        warnings.warn(
+            f"{fasta_path}: Contains {num_ambiguous} ambiguous base(s). "
+            "Please choose a better quality genome."
+        )
+
+    if num_contigs > 1:
+        warnings.warn(
+            f"{fasta_path}: Contains {num_contigs} contigs. "
+            "Does your organism have more than one chromosome? "
+            "Are you providing high quality assemblies?"
+        )
+
+    # Print results
+    print(f"\nGenome: {fasta_path}")
+    print(f"  Total ambiguous bases: {num_ambiguous}")
+    print("  Contig lengths:")
+
+    for contig, length in report['contig_lengths'].items():
+        print(f"    {contig}: {length}")
+
+    return report
 
 
 def extract_sequence(reference, chrom, start, end):
@@ -145,25 +271,25 @@ def create_valid_primer_combinations(df):
     for i in range(len(df)):
         # Pair coordinates with their mismatch maps
         left_coords = zip(df.at[i, "left_primer_loc"],
-                          df.at[i, "left_mismatch_map"])
+                          df.at[i, "left_match"])
         right_coords = zip(df.at[i, "right_primer_loc"],
-                           df.at[i, "right_mismatch_map"])
+                           df.at[i, "right_match"])
         # Safe assignment using .at[]
         df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
                                                           right_coords)
         for (
             primer_start,
             primer_end,
-            left_mismatch_map,
-            right_mismatch_map
+            left_match,
+            right_match
         ) in df.at[i, "valid_combinations"]:
             valid_primers.append(
                 {
                     "amplicon_number": df.at[i, "amplicon_number"],
                     "primer_start": primer_start,
                     "primer_end": primer_end,
-                    "left_mismatch_map": left_mismatch_map,
-                    "right_mismatch_map": right_mismatch_map
+                    "left_match": left_match,
+                    "right_match": right_match
                 }
             )
 
@@ -491,8 +617,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": right_fwd,
                 "left_seq_actual": left_fwd_actual,
                 "right_seq_actual": right_fwd_actual,
-                "left_mismatch_map": left_fwd_mismatch_map,
-                "right_mismatch_map": right_fwd_mismatch_map,
+                "left_match": left_fwd_mismatch_map,
+                "right_match": right_fwd_mismatch_map,
             })
         elif left_rev_pos and right_rev_pos:
             result_row.update({
@@ -500,8 +626,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": right_rev_pos,
                 "left_seq_actual": left_rev_actual,
                 "right_seq_actual": right_rev_actual,
-                "left_mismatch_map": left_rev_mismatch_map,
-                "right_mismatch_map": right_rev_mismatch_map,
+                "left_match": left_rev_mismatch_map,
+                "right_match": right_rev_mismatch_map,
             })
         else:
             result_row.update({
@@ -509,8 +635,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "right_primer_loc": [],
                 "left_seq_actual": [],
                 "right_seq_actual": [],
-                "left_mismatch_map": [],
-                "right_mismatch_map": []
+                "left_match": [],
+                "right_match": []
             })
 
         results.append(result_row)
@@ -542,15 +668,15 @@ def evaluate_matches(left_primer_coordinates, right_primer_coordinates):
         combinations = itertools.product(left_primer_coordinates,
                                          right_primer_coordinates)
         for left, right in combinations:
-            left_pos, left_mismatch_map = left
-            right_pos, right_mismatch_map = right
+            left_pos, left_match = left
+            right_pos, right_match = right
             amplicon_length = right_pos - left_pos
 
             if 0 < amplicon_length <= 2000:
                 valid_combinations.append(
                     (left_pos, right_pos,
-                     left_mismatch_map,
-                     right_mismatch_map)
+                     left_match,
+                     right_match)
                 )
 
         return valid_combinations

@@ -5,3 +5,5 @@ pandas
 click
 wgsim
 pytest
+minimap2
+freyja
