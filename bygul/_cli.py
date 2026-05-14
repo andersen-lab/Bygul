@@ -5,7 +5,6 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import sys
-import shutil
 import warnings
 
 
@@ -104,83 +103,32 @@ def simulate_proportions(
         run_simulation_on_fasta_single_genome,
         merge_fastq_files,
         find_closest_primer_match,
-        generate_random_values,
-        assess_genome_quality_from_fasta
+        assess_genome_quality_from_fasta,
+        validate_simulation_args,
+        check_dir,
+        process_sample_proportions
     )
+    # validare simulation arugments
+    validate_simulation_args(simulation_mode, primers, reference)
+    # needed to pass simulation specific flags
     extra_simulator_flags = ctx.args
-    if simulation_mode == "amplicon" and primers == "NA":
-        print("Primer file is required for simulation mode amplicon")
-        sys.exit(1)
-    if simulation_mode == "metagenomics" and primers != "NA":
-        print("Primer file not needed for metagenomics simulation")
-        sys.exit(1)
-    if simulation_mode == "metagenomics" and reference != "NA":
-        print("Reference file not needed for metagenomics simulation")
-        sys.exit(1)
-    if simulation_mode == "amplicon" and reference == "NA":
-        print("Reference file is required for simulation mode amplicon")
-        sys.exit(1)
     ctx = click.get_current_context()
-    if os.path.exists(outdir):
-        if not redo:
-            print(f"Directory '{outdir}'"
-                  "already exists. Use --redo to overwrite.")
-            sys.exit(1)
-        else:
-            print(f"Directory '{outdir}' exists. Removing and"
-                  "recreating because --redo was set.")
-            shutil.rmtree(outdir)
-            os.makedirs(outdir)
-    else:
-        os.makedirs(outdir)
+    # check directory exists- if redo specified make again
+    check_dir(outdir, redo)
+    # split the sample names and paths into a list
     sample_names = [fp.split("/")[-1].split(".")[0]
                     for fp in str(genomes).split(",")]
     sample_paths = str(genomes).split(",")
-
+    # Print information about the quality of the provided file
     for genome in sample_paths:
-        report = assess_genome_quality_from_fasta(genome)
-        num_contigs = len(report['contig_lengths'])
-        num_ambiguous = report['total_ambiguous_bases']
-
-        # Warnings handled here
-        if num_ambiguous > 0:
-            warnings.warn(f"{genome}: Contains {num_ambiguous}"
-                          "ambiguous base(s)."
-                          "Please choose a better quality genome..")
-
-        if num_contigs > 1:
-            warnings.warn(f"{genome}: Contains {num_contigs} contigs."
-                          "Does your organism have more than one chromosome?"
-                          "Are you providing high quality assemblies?")
-
-        # Print results
-        print(f"\nGenome: {genome}")
-        print(f"  Total ambiguous bases: {num_ambiguous}")
-        print("  Contig lengths:")
-        for contig, length in report['contig_lengths'].items():
-            print(f"    {contig}: {length}")
-
-    if proportions == "NA":
-        if len(sample_names) == 1:
-            print("Only one sample provided. "
-                  "Using 1.0 as the sample proportion.")
-            proportions = [1]
-        else:
-            print(
-                "Read simulation proportions not "
-                "provided. Generating proportions randomly..."
-            )
-            proportions = generate_random_values(len(sample_names))
-            with open(os.path.join(outdir, "sample_proportions.txt"),
-                      "w") as file:
-                for name, proportion in zip(sample_names, proportions):
-                    file.write(f"{name}: {proportion}\n")
-    else:
-        proportions = list(map(float, str(proportions).split(",")))
-    if len(sample_names) != len(proportions) != len(sample_paths):
-        raise Exception("Number of samples and proportions should match!")
-    if sum(proportions) != 1.0:
-        raise Exception("Sum of all proportions should equal to 1.0!")
+        assess_genome_quality_from_fasta(genome)
+    # process the proportions and give warnings if necessary
+    # assign proportions randomly if not provided
+    proportions = process_sample_proportions(proportions,
+                                             sample_names,
+                                             sample_names,
+                                             outdir)
+    # read counts defined pased on proportions
     read_cnts = [i * int(readcnt) for i in proportions]
     if simulation_mode == "amplicon":
         df = preprocess_primers(primers, reference)
