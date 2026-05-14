@@ -7,7 +7,7 @@ import pandas as pd
 
 
 @click.group(context_settings={"show_default": True})
-@click.version_option("3.0.1")
+@click.version_option("3.1.0")
 def cli():
     pass
 
