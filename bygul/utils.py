@@ -12,8 +12,6 @@ import warnings
 import sys
 import shutil
 
-import os
-
 
 def process_sample_proportions(
     proportions,
@@ -92,6 +90,7 @@ def check_dir(outdir, redo):
             os.makedirs(outdir)
     else:
         os.makedirs(outdir)
+
 
 def validate_simulation_args(simulation_mode, primers, reference):
     if simulation_mode == "amplicon" and primers == "NA":
