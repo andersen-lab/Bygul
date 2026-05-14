@@ -19,7 +19,7 @@ class ProportionTests(unittest.TestCase):
         # 2. Run Freyja Pipeline (Align -> Variants -> Demix)
         # Note: Replace 'minimap2' with your preferred aligner
         ref = "bygul/tests/data/reference.fasta"
-        os.system(f"minimap2 -ax sr {ref}"
+        os.system(f"minimap2 -ax sr {ref} "
                   "results/reads_1.fastq results/reads_2.fastq | "
                   "samtools sort -o results/merged.bam")
         os.system("samtools index results/merged.bam")
