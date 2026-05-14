@@ -324,7 +324,9 @@ def preprocess_primers(primer_file, reference):
         "primer_seq",
     ]
     # read the primer bed file
-    primer_bed = pd.read_csv(primer_file, sep="\t", names=col_names)
+    primer_bed = pd.read_csv(primer_file, sep="\t",
+                             names=col_names,
+                             comment='#')
     primer_bed = validate_primer_bed(primer_bed)
     primer_bed["primer_seq"] = primer_bed.apply(
         lambda row: extract_sequence(
@@ -368,6 +370,8 @@ def run_simulation_on_fasta(
     read_cnt,
     simulator,
     wgsim_insert_size,
+    wgsim_read_length,
+    wgsim_error_rate,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -406,6 +410,12 @@ def run_simulation_on_fasta(
                 str(reads_per_contig),
                 "-d",
                 str(wgsim_insert_size),
+                "-e",
+                str(wgsim_error_rate),
+                "-1",
+                str(wgsim_read_length),
+                "-2",
+                str(wgsim_read_length),
                 fasta_file,
                 output1,
                 output2,
