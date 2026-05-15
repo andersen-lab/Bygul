@@ -23,13 +23,17 @@ jobs:
           channel-priority: true
           python-version: '3.10'
           activate-environment: test
-          environment-file: ci/conda_requirements.txt
           conda-solver: libmamba
 
       - name: Install local package
         shell: bash -l {0}
         run: |
-          # The 'test' env is already active thanks to setup-miniconda + bash -l {0}
+          conda activate test
+          conda install -n base conda-libmamba-solver
+          conda config --set solver libmamba
+          conda config --add channels bioconda
+          conda config --add channels conda-forge          
+          conda install --yes --file ci/conda_requirements.txt
           python -m pip install --upgrade pip
           pip install --no-deps -e .
           
