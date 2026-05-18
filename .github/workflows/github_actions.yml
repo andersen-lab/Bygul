@@ -13,10 +13,10 @@ jobs:
 
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Setup for conda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v4
         with:
           auto-update-conda: true
           channels: bioconda,conda-forge
@@ -29,10 +29,9 @@ jobs:
         run: |
           conda install -n base conda-libmamba-solver
           conda config --set solver libmamba
-          conda config --add channels bioconda
-          conda config --add channels conda-forge          
+          conda activate test
           conda install --yes --file ci/conda_requirements.txt
-          pip install -e . --no-deps 
+          pip install -e .
           
       - name: Test
         shell: bash -l {0}
@@ -44,9 +43,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
       - name: Install dependencies
@@ -66,9 +65,9 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: "3.x"
       - name: Install dependencies
