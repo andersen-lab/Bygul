@@ -34,6 +34,6 @@ setup(
     },
     install_requires=[
         "click", "pandas", "biopython",
-        "regex", "numpy"
+        "regex", "numpy", "tqdm"
         ]
 )
