@@ -215,7 +215,10 @@ def validate_primer_bed(df):
         )
 
     # Check fourth column format
-    pattern = re.compile(r"^[\w-]+_\d+_(LEFT|RIGHT)(?:_.*)?$")
+    # This allows optional alternative
+    # suffixes like _alt or _1 after LEFT/RIGHT,
+    # but prevents the double-number format in the middle.
+    pattern = re.compile(r'^[A-Za-z0-9-]+_\d+_(LEFT|RIGHT)(_[A-Za-z0-9]+)?$')
 
     # Strip any leading/trailing spaces and ensure the values are strings
     if not all(
