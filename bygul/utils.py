@@ -270,7 +270,6 @@ def create_valid_primer_combinations(df):
         df["valid_combinations"] = None
 
     valid_primers = []  # Use a list instead of concatenating DataFrames
-
     for i in range(len(df)):
         # Pair coordinates with their mismatch maps
         left_coords = zip(df.at[i, "left_primer_loc"],
@@ -330,21 +329,27 @@ def preprocess_primers(primer_file, reference):
     primer_bed = pd.read_csv(primer_file, sep="\t",
                              names=col_names,
                              comment='#')
+
     primer_bed = validate_primer_bed(primer_bed)
-    primer_bed["primer_seq"] = primer_bed.apply(
-        lambda row: extract_sequence(
-            reference, row["ref"], row["start"], row["end"]),
-        axis=1,
-    )
+
+    ## old function to work with bed files without the sequence present, deprecated. 
+    # primer_bed["primer_seq"] = primer_bed.apply(
+    #     lambda row: extract_sequence(
+    #         reference, row["ref"], row["start"], row["end"]),
+    #     axis=1,
+    # )
+
     # split the amplicon name into number and left/right
     primer_bed["amplicon_number"] = primer_bed["left_right"].str.split(
         "_").str[1]
+    
     # merge the df with itself to have right and left primer on one row
     df = pd.merge(
         primer_bed.loc[primer_bed["left_right"].str.contains("LEFT")],
         primer_bed.loc[primer_bed["left_right"].str.contains("RIGHT")],
         on=["amplicon_number", "primer_pool"],
     )
+
     # select needed columns
     df = df[["amplicon_number", "primer_seq_x", "primer_seq_y"]]
     mask = df.duplicated(subset=["amplicon_number"], keep=False)
@@ -533,7 +538,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
     for _, row in df.iterrows():
         primer_left = row["primer_seq_x"]
         primer_right = row["primer_seq_y"]
-
+        primer_right = str(Seq(primer_right).reverse_complement())
+        
         pattern_left = f"({primer_left}){{s<={maxmismatch}}}"
         pattern_right = f"({primer_right}){{s<={maxmismatch}}}"
 
@@ -546,6 +552,7 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                                                     reference_seq,
                                                     flags=re.IGNORECASE,
                                                     overlapped=True)]
+        
 
         left_fwd_actual = [reference_seq[pos:pos+len(primer_left)]
                            for pos in left_fwd]
