@@ -326,16 +326,42 @@ def preprocess_primers(primer_file, reference):
         "strand",
         "primer_seq",
     ]
-    # read the primer bed file
-    primer_bed = pd.read_csv(primer_file, sep="\t",
-                             names=col_names,
-                             comment='#')
-    primer_bed = validate_primer_bed(primer_bed)
-    primer_bed["primer_seq"] = primer_bed.apply(
-        lambda row: extract_sequence(
-            reference, row["ref"], row["start"], row["end"]),
-        axis=1,
+
+    primer_bed = pd.read_csv(
+        primer_file,
+        sep="\t",
+        names=col_names,
+        comment="#",
     )
+
+    primer_bed = validate_primer_bed(primer_bed)
+
+    if (
+        "primer_seq" not in primer_bed.columns
+        or primer_bed["primer_seq"].isna().all()
+        or (primer_bed["primer_seq"].astype(str).str.strip() == "").all()
+    ):
+        warnings.warn(
+            "primer_seq column missing or empty; "
+            "extracting sequences from reference.. "
+            "This is not recommended.",
+            UserWarning,
+        )
+        primer_bed["primer_seq"] = primer_bed.apply(
+            lambda row: extract_sequence(
+                reference,
+                row["ref"],
+                row["start"],
+                row["end"],
+            ),
+            axis=1,
+        )
+    else:
+        neg_strand = primer_bed["strand"] == "-"
+        primer_bed.loc[neg_strand, "primer_seq"] = (
+            primer_bed.loc[neg_strand, "primer_seq"]
+            .apply(lambda seq: str(Seq(seq).reverse_complement()))
+            )
     # split the amplicon name into number and left/right
     primer_bed["amplicon_number"] = primer_bed["left_right"].str.split(
         "_").str[1]
