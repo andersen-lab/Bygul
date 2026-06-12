@@ -169,7 +169,6 @@ def assess_genome_quality_from_fasta(fasta_path):
 
 def extract_sequence(reference, chrom, start, end):
     """Extracts sequence from reference based on coordinates and strand."""
-    reference = next(SeqIO.parse(reference, "fasta"))
     if reference.id not in chrom:
         raise ValueError(f"Chromosome {chrom} not found in reference.")
     seq = reference.seq[start:end]  # Extract sequence
