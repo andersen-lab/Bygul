@@ -295,6 +295,8 @@ def check_primers(genomes, primers, reference, maxmismatch):
     )
 
     assess_genome_quality_from_fasta(genomes)
+    # read the reference sequence
+    reference = next(SeqIO.parse(reference, "fasta"))
     primer_df = preprocess_primers(primers, reference)
     print("Reading and preprocessing the primer file...")
     all_results = []
