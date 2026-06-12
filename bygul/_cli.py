@@ -120,6 +120,7 @@ def simulate_proportions(
     )
     # validare simulation arugments
     validate_simulation_args(simulation_mode, primers, reference)
+    # read the reference sequence
     reference = next(SeqIO.parse(reference, "fasta"))
     # needed to pass simulation specific flags
     extra_simulator_flags = ctx.args
