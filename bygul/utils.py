@@ -550,9 +550,9 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
     """
     results = []
     warned = False
-    for _, row in df.iterrows():
-        primer_left = row["primer_seq_x"]
-        primer_right = row["primer_seq_y"]
+    for row in df.itertuples(index=False):
+        primer_left = row.primer_seq_x
+        primer_right = row.primer_seq_y
 
         pattern_left = f"({primer_left}){{s<={maxmismatch}}}"
         pattern_right = f"({primer_right}){{s<={maxmismatch}}}"
@@ -631,7 +631,7 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                           "Matches may be unreliable.")
             warned = True
 
-        result_row = row.to_dict()
+        result_row = row._asdict()
         result_row["ambiguous_bases"] = has_ambiguous_base
 
         if left_fwd and right_fwd:
