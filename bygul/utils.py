@@ -346,15 +346,10 @@ def preprocess_primers(primer_file, reference):
             "This is not recommended.",
             UserWarning,
         )
-        primer_bed["primer_seq"] = primer_bed.apply(
-            lambda row: extract_sequence(
-                reference,
-                row["ref"],
-                row["start"],
-                row["end"],
-            ),
-            axis=1,
-        )
+        primer_bed["primer_seq"] = [
+            extract_sequence(reference, row.ref, row.start, row.end) 
+            for row in primer_bed.itertuples(index=False)
+            ]
     else:
         neg_strand = primer_bed["strand"] == "-"
         primer_bed.loc[neg_strand, "primer_seq"] = (
