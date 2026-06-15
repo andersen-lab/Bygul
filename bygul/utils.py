@@ -531,8 +531,8 @@ def mismatch_alignment(primer, matched_seq):
     Also returns a flag if primer contains any ambiguous base.
     """
     ambiguous_bases = {'R', 'Y', 'S', 'W',
-                        'K', 'M', 'B', 'D',
-                        'H', 'V', 'N'}
+                       'K', 'M', 'B', 'D',
+                       'H', 'V', 'N'}
     has_ambiguity = any(base in ambiguous_bases
                         for base in matched_seq.upper())
     aligned = []
