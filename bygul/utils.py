@@ -352,10 +352,11 @@ def preprocess_primers(primer_file, reference):
             ]
     else:
         neg_strand = primer_bed["strand"] == "-"
-        primer_bed.loc[neg_strand, "primer_seq"] = (
-            primer_bed.loc[neg_strand, "primer_seq"]
-            .apply(lambda seq: str(Seq(seq).reverse_complement()))
-            )
+        _rc = str.maketrans("ACGTacgt", "TGCAtgca")
+        primer_bed.loc[neg_strand, "primer_seq"] = [
+            seq.translate(_rc)[::-1] 
+            for seq in primer_bed.loc[neg_strand, "primer_seq"]
+            ]
     # split the amplicon name into number and left/right
     primer_bed["amplicon_number"] = primer_bed["left_right"].str.split(
         "_").str[1]
