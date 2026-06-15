@@ -143,8 +143,8 @@ def simulate_proportions(
     # read counts defined pased on proportions
     read_cnts = [i * int(readcnt) for i in proportions]
     if simulation_mode == "amplicon":
-        df_primers_template = preprocess_primers(primers, reference)
         print("Reading and preprocessing the primer file...")
+        df_primers_template = preprocess_primers(primers, reference)
 
         with tqdm(total=len(sample_names),
                   desc="Simulation progress...") as pbar:
