@@ -524,6 +524,23 @@ def run_simulation_on_fasta_single_genome(
         print(f"An error occurred while running the command: {e}")
 
 
+# Extended ambiguity-aware mismatch display
+def mismatch_alignment(primer, matched_seq):
+    """
+    Returns matched sequence with mismatches shown in parentheses.
+    Also returns a flag if primer contains any ambiguous base.
+    """
+    ambiguous_bases = {'R', 'Y', 'S', 'W',
+                        'K', 'M', 'B', 'D',
+                        'H', 'V', 'N'}
+    has_ambiguity = any(base in ambiguous_bases
+                        for base in matched_seq.upper())
+    aligned = []
+    for p, m in zip(primer.upper(), matched_seq.upper()):
+        aligned.append(m if p == m else f"({m})")
+    return "".join(aligned), has_ambiguity
+
+
 def find_closest_primer_match(df, reference_seq, maxmismatch):
     """
     For each row in df, find all left/right primer match positions (as lists),
@@ -531,26 +548,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
     on the same strand. Returns original df columns + matches, mismatch maps,
     strand, and whether primers contain ambiguous bases (IUPAC codes).
     """
-
-    # Extended ambiguity-aware mismatch display
-    def mismatch_alignment(primer, matched_seq):
-        """
-        Returns matched sequence with mismatches shown in parentheses.
-        Also returns a flag if primer contains any ambiguous base.
-        """
-        ambiguous_bases = {'R', 'Y', 'S', 'W',
-                           'K', 'M', 'B', 'D',
-                           'H', 'V', 'N'}
-        has_ambiguity = any(base in ambiguous_bases
-                            for base in matched_seq.upper())
-        aligned = []
-        for p, m in zip(primer.upper(), matched_seq.upper()):
-            aligned.append(m if p == m else f"({m})")
-        return "".join(aligned), has_ambiguity
-
     results = []
     warned = False
-
     for _, row in df.iterrows():
         primer_left = row["primer_seq_x"]
         primer_right = row["primer_seq_y"]
