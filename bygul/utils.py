@@ -725,3 +725,103 @@ def write_fasta_group(group, amplicon_number, output_dir):
             "no file written.please checkout the amplicon_stats.csv "
             "file for more information."
         )
+
+
+def process_amplicon_worker(args):
+    """Worker for the 'amplicon' simulation mode."""
+    (name, path, cnt, df_primers_template, maxmismatch, outdir,
+     simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+     extra_simulator_flags) = args
+
+    sample_amplicons_list = []
+
+    for genome_seq in SeqIO.parse(path, "fasta"):
+        contig_df = find_closest_primer_match(
+            df_primers_template.copy(),
+            str(genome_seq.seq),
+            maxmismatch
+        )
+        all_amplicons = create_valid_primer_combinations(contig_df)
+        all_amplicons = all_amplicons.fillna(0)
+
+        all_amplicons["amplicon_length"] = np.where(
+            (all_amplicons["primer_start"] != 0) &
+            (all_amplicons["primer_end"] != 0),
+            all_amplicons["primer_end"] -
+            all_amplicons["primer_start"] +
+            all_amplicons["primer_seq_y"].str.len(),
+            0,
+        )
+
+        all_amplicons["amplicon_sequence"] = all_amplicons.apply(
+            lambda row: make_amplicon(
+                row["primer_start"],
+                row["primer_end"],
+                row["primer_seq_y"],
+                genome_seq.seq,
+            ), axis=1,
+        )
+        all_amplicons["contig_id"] = genome_seq.id
+        sample_amplicons_list.append(all_amplicons)
+
+    if not sample_amplicons_list:
+        return ("warning", f"Warning: No sequences found in {path}")
+
+    full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
+    amp_out_dir = os.path.join(outdir, name, "amplicons")
+    os.makedirs(amp_out_dir, exist_ok=True)
+    full_sample_df.to_csv(os.path.join(amp_out_dir,
+                                       "amplicon_stats.csv"),
+                          index=False)
+
+    full_sample_df["amplicon_suffix"] = full_sample_df[
+        "amplicon_number"].apply(
+        lambda x: x.split("_")[0] if "_" in x else x
+    )
+    for n, g in full_sample_df.groupby("amplicon_suffix"):
+        write_fasta_group(g, n, amp_out_dir)
+
+    read_dir = os.path.join(outdir, name, "reads")
+    os.makedirs(read_dir, exist_ok=True)
+
+    fasta_files = [
+        os.path.join(amp_out_dir, f)
+        for f in os.listdir(amp_out_dir)
+        if f.endswith((".fasta", ".fa"))
+    ]
+
+    for fasta_file in fasta_files:
+        run_simulation_on_fasta(
+            fasta_file, read_dir, cnt, simulator,
+            wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+            extra_flags=extra_simulator_flags
+        )
+
+    # Expected paths for merging step in main thread
+    read_path1 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/merged_reads_1.fastq")
+    read_path2 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/merged_reads_2.fastq")
+    return ("success", name, read_path1, read_path2)
+
+
+def process_genome_worker(args):
+    """Worker for the default/standard genome simulation mode (else clause)."""
+    name, path, cnt, outdir, simulator, extra_simulator_flags = args
+    read_dir = os.path.join(outdir, name, "reads")
+    os.makedirs(read_dir, exist_ok=True)
+
+    run_simulation_on_fasta_single_genome(
+        path,
+        read_dir,
+        cnt,
+        simulator,
+        extra_flags=extra_simulator_flags
+    )
+
+    # Expected paths for merging step in main thread
+    read_path1 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/reads_1.fastq")
+    read_path2 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/reads_2.fastq")
+    return ("success", name, read_path1, read_path2)
