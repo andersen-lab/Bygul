@@ -83,6 +83,11 @@ def check_dir(outdir, redo):
             print(f"Directory '{outdir}'"
                   "already exists. Use --redo to overwrite.")
             sys.exit(1)
+        else:
+            print(f"Directory '{outdir}' exists. Removing and"
+                  "recreating because --redo was set.")
+            shutil.rmtree(outdir)
+            os.makedirs(outdir)
     else:
         os.makedirs(outdir)
 

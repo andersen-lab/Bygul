@@ -1,5 +1,4 @@
 import os
-import shutil
 from Bio import SeqIO
 import click
 from tqdm import tqdm
@@ -141,12 +140,6 @@ def simulate_proportions(
                                              outdir)
     # read counts defined pased on proportions
     read_cnts = [i * int(readcnt) for i in proportions]
-    if redo:
-        for merged_file in ["reads_1.fastq", "reads_2.fastq"]:
-            merged_path = os.path.join(outdir, merged_file)
-            if os.path.exists(merged_path):
-                os.remove(merged_path)
-
     if simulation_mode == "amplicon":
         df_primers_template = preprocess_primers(primers, reference)
         print("Reading and preprocessing the primer file...")
@@ -155,9 +148,6 @@ def simulate_proportions(
                   desc="Simulation progress...") as pbar:
             for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
                 print(f"Processing sample {name}...")
-                sample_dir = os.path.join(outdir, name)
-                if redo and os.path.exists(sample_dir):
-                    shutil.rmtree(sample_dir)
                 # List to store amplicon
                 # DataFrames from all contigs in this sample
                 sample_amplicons_list = []
@@ -256,9 +246,6 @@ def simulate_proportions(
         with tqdm(total=len(sample_names),
                   desc="Simulation progress...") as pbar:
             for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
-                sample_dir = os.path.join(outdir, name)
-                if redo and os.path.exists(sample_dir):
-                    shutil.rmtree(sample_dir)
                 if not os.path.exists(os.path.join(outdir, name, "reads")):
                     os.makedirs(os.path.join(outdir, name, "reads"))
                 run_simulation_on_fasta_single_genome(
