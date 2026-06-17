@@ -123,11 +123,11 @@ def simulate_proportions(
     # needed to pass simulation specific flags
     extra_simulator_flags = ctx.args
     ctx = click.get_current_context()
-    # check directory exists- if redo specified make again
-    check_dir(outdir, redo)
     # split the sample names and paths into a list
     sample_names = [fp.split("/")[-1].split(".")[0]
                     for fp in str(genomes).split(",")]
+    # check directory exists- if redo specified make again
+    check_dir(outdir, redo, sample_names)
     sample_paths = str(genomes).split(",")
     # Print information about the quality of the provided file
     for genome in sample_paths:
