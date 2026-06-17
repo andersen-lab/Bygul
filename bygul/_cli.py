@@ -51,8 +51,8 @@ def cli():
 @click.option(
     "--simulator",
     default="wgsim",
-    type=click.Choice(["wgsim", "mason"], case_sensitive=False),
-    help="Select the simulator to use (wgsim or mason)",
+    type=click.Choice(["wgsim", "mason", "art"], case_sensitive=False),
+    help="Select the simulator to use (wgsim, mason, or art)",
 )
 @click.option(
     "--simulation_mode",
@@ -69,17 +69,33 @@ def cli():
 @click.option(
     "--wgsim_insert_size", default=150,
     help="Outer distance for simulation using wgsim in amplicon"
-    "simulation mode."
+    " simulation mode."
 )
 @click.option(
     "--wgsim_read_length", default=150,
     help="Read length for simulation using wgsim in amplicon"
-    "simulation mode."
+    " simulation mode."
 )
 @click.option(
     "--wgsim_error_rate", default=0.0001,
     help="Error rate for simulation using wgsim in amplicon"
-    "simulation mode."
+    " simulation mode."
+)
+@click.option(
+    "--art_read_length", default=150,
+    help="Read length for simulation using ART Illumina."
+)
+@click.option(
+    "--art_insert_size", default=300,
+    help="Mean fragment size for paired-end simulation using ART Illumina."
+)
+@click.option(
+    "--art_insert_sd", default=10,
+    help="Fragment size standard deviation for ART Illumina."
+)
+@click.option(
+    "--art_seq_system", default="MSv3",
+    help="ART Illumina sequencing system/profile."
 )
 @click.option("--readcnt", default=500, help="Number of reads per amplicon")
 @click.option(
@@ -97,6 +113,10 @@ def simulate_proportions(
     wgsim_insert_size,
     wgsim_read_length,
     wgsim_error_rate,
+    art_read_length,
+    art_insert_size,
+    art_insert_sd,
+    art_seq_system,
     outdir,
     readcnt,
     maxmismatch,
@@ -123,6 +143,7 @@ def simulate_proportions(
     # needed to pass simulation specific flags
     extra_simulator_flags = ctx.args
     ctx = click.get_current_context()
+    simulator = simulator.lower()
     # check directory exists- if redo specified make again
     check_dir(outdir, redo)
     # split the sample names and paths into a list
@@ -226,6 +247,10 @@ def simulate_proportions(
                         wgsim_insert_size,
                         wgsim_read_length,
                         wgsim_error_rate,
+                        art_read_length,
+                        art_insert_size,
+                        art_insert_sd,
+                        art_seq_system,
                         extra_flags=extra_simulator_flags
                     )
                 # Merging logic remains the same
@@ -253,6 +278,10 @@ def simulate_proportions(
                         os.path.join(outdir, name, "reads"),
                         cnt,
                         simulator,
+                        art_read_length,
+                        art_insert_size,
+                        art_insert_sd,
+                        art_seq_system,
                         extra_flags=extra_simulator_flags
                     )
                 read_path1 = os.path.join(

@@ -372,6 +372,10 @@ def run_simulation_on_fasta(
     wgsim_insert_size,
     wgsim_read_length,
     wgsim_error_rate,
+    art_read_length=150,
+    art_insert_size=200,
+    art_insert_sd=10,
+    art_seq_system="MSv3",
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -423,7 +427,7 @@ def run_simulation_on_fasta(
             if extra_flags:
                 command.extend(extra_flags)
 
-        else:
+        elif simulator == "mason":
             # Adjust Mason command
             command = [
                 "mason_simulator",
@@ -438,6 +442,37 @@ def run_simulation_on_fasta(
             ]
             if extra_flags:
                 command.extend(extra_flags)
+
+        elif simulator == "art":
+            art_output_prefix = os.path.join(
+                output_dir, f"{output_prefix}_contig{contig_idx + 1}_"
+            )
+            output1 = f"{art_output_prefix}1.fq"
+            output2 = f"{art_output_prefix}2.fq"
+            command = [
+                "art_illumina",
+                "-ss",
+                str(art_seq_system),
+                "-p",
+                "-na",
+                "-i",
+                fasta_file,
+                "-l",
+                str(art_read_length),
+                "-c",
+                str(int(reads_per_contig)),
+                "-m",
+                str(art_insert_size),
+                "-s",
+                str(art_insert_sd),
+                "-o",
+                art_output_prefix,
+            ]
+            if extra_flags:
+                command.extend(extra_flags)
+
+        else:
+            raise ValueError(f"Unsupported simulator: {simulator}")
         # Run the simulator command and capture any errors
         try:
             subprocess.run(
@@ -455,6 +490,10 @@ def run_simulation_on_fasta_single_genome(
     output_dir,
     read_cnt,
     simulator,
+    art_read_length=150,
+    art_insert_size=300,
+    art_insert_sd=10,
+    art_seq_system="MSv3",
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -477,7 +516,7 @@ def run_simulation_on_fasta_single_genome(
         ]
         if extra_flags:
             command.extend(extra_flags)
-    else:
+    elif simulator == "mason":
         # Adjust Mason command
         command = [
             "mason_simulator",
@@ -492,10 +531,40 @@ def run_simulation_on_fasta_single_genome(
         ]
         if extra_flags:
             command.extend(extra_flags)
+    elif simulator == "art":
+        art_output_prefix = os.path.join(output_dir, "reads_")
+        art_output1 = f"{art_output_prefix}1.fq"
+        art_output2 = f"{art_output_prefix}2.fq"
+        command = [
+            "art_illumina",
+            "-ss",
+            str(art_seq_system),
+            "-p",
+            "-na",
+            "-i",
+            fasta_file,
+            "-l",
+            str(art_read_length),
+            "-c",
+            str(int(read_cnt)),
+            "-m",
+            str(art_insert_size),
+            "-s",
+            str(art_insert_sd),
+            "-o",
+            art_output_prefix,
+        ]
+        if extra_flags:
+            command.extend(extra_flags)
+    else:
+        raise ValueError(f"Unsupported simulator: {simulator}")
     # Run the simulator command and capture any errors
     try:
         subprocess.run(
             command, check=True, capture_output=True, text=True)
+        if simulator == "art":
+            shutil.move(art_output1, output1)
+            shutil.move(art_output2, output2)
     except subprocess.CalledProcessError as e:
         print(f"An error occurred while running the command: {e}")
 
