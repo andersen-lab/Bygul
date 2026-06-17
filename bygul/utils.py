@@ -252,15 +252,9 @@ def generate_random_values(N):
 
 
 def merge_fastq_files(fastq_file, output_file):
-    """
-    Merges a FASTQ file into an output FASTQ file using subprocess.call.
-
-    Parameters:
-    fastq_file (str): Path to the input FASTQ file.
-    output_file (str): Path to the output FASTQ file.
-    """
-    command = f'cat "{fastq_file}" >> "{output_file}"'
-    subprocess.call(command, shell=True)
+    # Merges FASTQ file into an output FASTQ file.
+    with open(fastq_file, "rb") as src, open(output_file, "ab") as dst:
+        shutil.copyfileobj(src, dst)
 
 
 def create_valid_primer_combinations(df):
@@ -468,10 +462,8 @@ def run_simulation_on_fasta(
                 command, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
             print(f"An error occurred while running the command: {e}")
-        # Merge the contig-specific output into the final merged output files
-        command_merge = f'cat "{output1}" >> "{merged_output1}" \
-            && cat "{output2}" >> "{merged_output2}"'
-        subprocess.call(command_merge, shell=True)
+        merge_fastq_files(output1, merged_output1)
+        merge_fastq_files(output2, merged_output2)
 
 
 def run_simulation_on_fasta_single_genome(
