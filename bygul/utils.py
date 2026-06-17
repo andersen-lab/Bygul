@@ -77,19 +77,37 @@ def process_sample_proportions(
     return proportions
 
 
-def check_dir(outdir, redo):
-    if os.path.exists(outdir):
+def check_dir(outdir, redo, sample_names):
+    # Define the specific targets we want to protect/overwrite
+    targets = [
+        os.path.join(outdir, "reads_1.fastq"),
+        os.path.join(outdir, "reads_2.fastq")
+    ]
+    for sample in sample_names:
+        targets.append(os.path.join(outdir, sample))
+
+    # Check if any of these specific targets already exist
+    existing_targets = [t for t in targets if os.path.exists(t)]
+
+    if existing_targets:
         if not redo:
-            print(f"Directory '{outdir}'"
-                  "already exists. Use --redo to overwrite.")
+            print("Error: The following output files/"
+                  f"directories already exist in '{outdir}':")
+            for t in existing_targets:
+                print(f"  - {os.path.basename(t)}")
+            print("Use --redo to overwrite them.")
             sys.exit(1)
         else:
-            print(f"Directory '{outdir}' exists. Removing and"
-                  "recreating because --redo was set.")
-            shutil.rmtree(outdir)
-            os.makedirs(outdir)
+            print("Notice: Overwriting existing outputs "
+                  f"in '{outdir}' because --redo was set.")
+            for t in existing_targets:
+                if os.path.isdir(t):
+                    shutil.rmtree(t)
+                else:
+                    os.remove(t)
+            os.makedirs(outdir, exist_ok=True)
     else:
-        os.makedirs(outdir)
+        os.makedirs(outdir, exist_ok=True)
 
 
 def validate_simulation_args(simulation_mode, primers, reference):
