@@ -77,19 +77,37 @@ def process_sample_proportions(
     return proportions
 
 
-def check_dir(outdir, redo):
-    if os.path.exists(outdir):
+def check_dir(outdir, redo, sample_names):
+    # Define the specific targets we want to protect/overwrite
+    targets = [
+        os.path.join(outdir, "reads_1.fastq"),
+        os.path.join(outdir, "reads_2.fastq")
+    ]
+    for sample in sample_names:
+        targets.append(os.path.join(outdir, sample))
+
+    # Check if any of these specific targets already exist
+    existing_targets = [t for t in targets if os.path.exists(t)]
+
+    if existing_targets:
         if not redo:
-            print(f"Directory '{outdir}'"
-                  "already exists. Use --redo to overwrite.")
+            print("Error: The following output files/"
+                  f"directories already exist in '{outdir}':")
+            for t in existing_targets:
+                print(f"  - {os.path.basename(t)}")
+            print("Use --redo to overwrite them.")
             sys.exit(1)
         else:
-            print(f"Directory '{outdir}' exists. Removing and"
-                  "recreating because --redo was set.")
-            shutil.rmtree(outdir)
-            os.makedirs(outdir)
+            print("Notice: Overwriting existing outputs "
+                  f"in '{outdir}' because --redo was set.")
+            for t in existing_targets:
+                if os.path.isdir(t):
+                    shutil.rmtree(t)
+                else:
+                    os.remove(t)
+            os.makedirs(outdir, exist_ok=True)
     else:
-        os.makedirs(outdir)
+        os.makedirs(outdir, exist_ok=True)
 
 
 def validate_simulation_args(simulation_mode, primers, reference):
@@ -215,7 +233,10 @@ def validate_primer_bed(df):
         )
 
     # Check fourth column format
-    pattern = re.compile(r"^[\w-]+_\d+_(LEFT|RIGHT)(?:_.*)?$")
+    # This allows optional alternative
+    # suffixes like _alt or _1 after LEFT/RIGHT,
+    # but prevents the double-number format in the middle.
+    pattern = re.compile(r'^[A-Za-z0-9-]+_\d+_(LEFT|RIGHT)(_[A-Za-z0-9]+)?$')
 
     # Strip any leading/trailing spaces and ensure the values are strings
     if not all(
@@ -323,16 +344,42 @@ def preprocess_primers(primer_file, reference):
         "strand",
         "primer_seq",
     ]
-    # read the primer bed file
-    primer_bed = pd.read_csv(primer_file, sep="\t",
-                             names=col_names,
-                             comment='#')
-    primer_bed = validate_primer_bed(primer_bed)
-    primer_bed["primer_seq"] = primer_bed.apply(
-        lambda row: extract_sequence(
-            reference, row["ref"], row["start"], row["end"]),
-        axis=1,
+
+    primer_bed = pd.read_csv(
+        primer_file,
+        sep="\t",
+        names=col_names,
+        comment="#",
     )
+
+    primer_bed = validate_primer_bed(primer_bed)
+
+    if (
+        "primer_seq" not in primer_bed.columns
+        or primer_bed["primer_seq"].isna().all()
+        or (primer_bed["primer_seq"].astype(str).str.strip() == "").all()
+    ):
+        warnings.warn(
+            "primer_seq column missing or empty; "
+            "extracting sequences from reference.. "
+            "This is not recommended.",
+            UserWarning,
+        )
+        primer_bed["primer_seq"] = primer_bed.apply(
+            lambda row: extract_sequence(
+                reference,
+                row["ref"],
+                row["start"],
+                row["end"],
+            ),
+            axis=1,
+        )
+    else:
+        neg_strand = primer_bed["strand"] == "-"
+        primer_bed.loc[neg_strand, "primer_seq"] = (
+            primer_bed.loc[neg_strand, "primer_seq"]
+            .apply(lambda seq: str(Seq(seq).reverse_complement()))
+            )
     # split the amplicon name into number and left/right
     primer_bed["amplicon_number"] = primer_bed["left_right"].str.split(
         "_").str[1]
