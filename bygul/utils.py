@@ -262,6 +262,7 @@ def merge_fastq_files(fastq_file, output_file):
     with open(fastq_file, "rb") as src, open(output_file, "ab") as dst:
         shutil.copyfileobj(src, dst)
 
+
 def create_valid_primer_combinations(df):
     # Ensure the column exists before assignment
     if "valid_combinations" not in df.columns:
