@@ -270,9 +270,8 @@ def create_valid_primer_combinations(df):
         right_coords = zip(df.at[i, "right_primer_loc"],
                            df.at[i, "right_match"])
         amplicon_number = df.at[i, "amplicon_number"]
-        for primer_start, primer_end, left_match, right_match in evaluate_matches(
-            left_coords, right_coords
-        ):
+        matches = evaluate_matches(left_coords, right_coords)
+        for primer_start, primer_end, left_match, right_match in matches:
             valid_primers.append(
                 {
                     "amplicon_number": amplicon_number,
@@ -561,7 +560,8 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             *[mismatch_alignment(primer_left, seq) for seq in left_fwd_actual]
         ) if left_fwd_actual else ([], [])
         right_fwd_mismatch_map, right_fwd_has_ambig = zip(
-            *[mismatch_alignment(primer_right, seq) for seq in right_fwd_actual]
+            *[mismatch_alignment(primer_right, seq)
+              for seq in right_fwd_actual]
         ) if right_fwd_actual else ([], [])
         # Reverse strand search
         # get complimentary reverse of primers
