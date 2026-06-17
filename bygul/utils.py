@@ -265,23 +265,17 @@ def create_valid_primer_combinations(df):
     valid_primers = []  # Use a list instead of concatenating DataFrames
 
     for i in range(len(df)):
-        # Pair coordinates with their mismatch maps
         left_coords = zip(df.at[i, "left_primer_loc"],
                           df.at[i, "left_match"])
         right_coords = zip(df.at[i, "right_primer_loc"],
                            df.at[i, "right_match"])
-        # Safe assignment using .at[]
-        df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
-                                                          right_coords)
-        for (
-            primer_start,
-            primer_end,
-            left_match,
-            right_match
-        ) in df.at[i, "valid_combinations"]:
+        amplicon_number = df.at[i, "amplicon_number"]
+        for primer_start, primer_end, left_match, right_match in evaluate_matches(
+            left_coords, right_coords
+        ):
             valid_primers.append(
                 {
-                    "amplicon_number": df.at[i, "amplicon_number"],
+                    "amplicon_number": amplicon_number,
                     "primer_start": primer_start,
                     "primer_end": primer_end,
                     "left_match": left_match,
@@ -563,18 +557,12 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                            for pos in left_fwd]
         right_fwd_actual = [reference_seq[pos:pos+len(primer_right)]
                             for pos in right_fwd]
-        left_fwd_mismatch_map = []
-        left_fwd_has_ambig = []
-        for seq in left_fwd_actual:
-            aligned, has_ambig = mismatch_alignment(primer_left, seq)
-            left_fwd_mismatch_map.append(aligned)
-            left_fwd_has_ambig.append(has_ambig)
-        right_fwd_mismatch_map = []
-        right_fwd_has_ambig = []
-        for seq in right_fwd_actual:
-            aligned, has_ambig = mismatch_alignment(primer_right, seq)
-            right_fwd_mismatch_map.append(aligned)
-            right_fwd_has_ambig.append(has_ambig)
+        left_fwd_mismatch_map, left_fwd_has_ambig = zip(
+            *[mismatch_alignment(primer_left, seq) for seq in left_fwd_actual]
+        ) if left_fwd_actual else ([], [])
+        right_fwd_mismatch_map, right_fwd_has_ambig = zip(
+            *[mismatch_alignment(primer_right, seq) for seq in right_fwd_actual]
+        ) if right_fwd_actual else ([], [])
         # Reverse strand search
         # get complimentary reverse of primers
         # right and left primer change direction
@@ -595,18 +583,12 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                            for pos in left_rev_pos]
         right_rev_actual = [reference_seq[pos:pos+len(right_rev)]
                             for pos in right_rev_pos]
-        left_rev_mismatch_map = []
-        left_rev_has_ambig = []
-        for seq in left_rev_actual:
-            aligned, has_ambig = mismatch_alignment(left_rev, seq)
-            left_rev_mismatch_map.append(aligned)
-            left_rev_has_ambig.append(has_ambig)
-        right_rev_mismatch_map = []
-        right_rev_has_ambig = []
-        for seq in right_rev_actual:
-            aligned, has_ambig = mismatch_alignment(right_rev, seq)
-            right_rev_mismatch_map.append(aligned)
-            right_rev_has_ambig.append(has_ambig)
+        left_rev_mismatch_map, left_rev_has_ambig = zip(
+            *[mismatch_alignment(left_rev, seq) for seq in left_rev_actual]
+        ) if left_rev_actual else ([], [])
+        right_rev_mismatch_map, right_rev_has_ambig = zip(
+            *[mismatch_alignment(right_rev, seq) for seq in right_rev_actual]
+        ) if right_rev_actual else ([], [])
 
         # Check if any ambiguous bases are in the primers or alignments
         has_ambiguous_base = any([
@@ -729,7 +711,7 @@ def process_amplicon_worker(args):
 
     for genome_seq in SeqIO.parse(path, "fasta"):
         contig_df = find_closest_primer_match(
-            df_primers_template.copy(),
+            df_primers_template,
             str(genome_seq.seq),
             maxmismatch
         )
@@ -766,9 +748,8 @@ def process_amplicon_worker(args):
                                        "amplicon_stats.csv"),
                           index=False)
 
-    full_sample_df["amplicon_suffix"] = full_sample_df[
-        "amplicon_number"].apply(
-        lambda x: x.split("_")[0] if "_" in x else x
+    full_sample_df["amplicon_suffix"] = (
+        full_sample_df["amplicon_number"].str.split("_").str[0]
     )
     for n, g in full_sample_df.groupby("amplicon_suffix"):
         write_fasta_group(g, n, amp_out_dir)
