@@ -594,10 +594,10 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
 
         # --- 3. REVERSE STRAND SEARCH (IF FORWARD FAILS) ---
         if not left_fwd or not right_fwd:
-            # Using unique variable names (_seq)
-            # to avoid overwriting coordinate lists
-            right_rev_seq = str(Seq(primer_left).reverse_complement())
-            left_rev_seq = str(Seq(primer_right).reverse_complement())
+            complement_table = str.maketrans("ATCGatcg", "TAGCtagc")
+            # Reverse complement without Bio Python
+            right_rev_seq = primer_left.translate(complement_table)[::-1]
+            left_rev_seq = primer_right.translate(complement_table)[::-1]
             pattern_left_rev = f"({left_rev_seq}){{s<={maxmismatch}}}"
             pattern_right_rev = f"({right_rev_seq}){{s<={maxmismatch}}}"
             left_rev_data = [
