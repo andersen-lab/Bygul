@@ -573,7 +573,6 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             for m in re.finditer(pattern_right, reference_seq,
                                  flags=re.IGNORECASE, overlapped=True)
         ]
-        
         left_fwd = [pos for pos, _ in left_fwd_data]
         right_fwd = [pos for pos, _ in right_fwd_data]
 
@@ -586,7 +585,6 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             aligned, has_ambig = mismatch_alignment(primer_left, seq)
             left_fwd_mismatch_map.append(aligned)
             left_fwd_has_ambig.append(has_ambig)
-            
         right_fwd_mismatch_map = []
         right_fwd_has_ambig = []
         for seq in right_fwd_actual:
@@ -596,13 +594,12 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
 
         # --- 3. REVERSE STRAND SEARCH (IF FORWARD FAILS) ---
         if not left_fwd or not right_fwd:
-            # Using unique variable names (_seq) to avoid overwriting coordinate lists
+            # Using unique variable names (_seq)
+            # to avoid overwriting coordinate lists
             right_rev_seq = str(Seq(primer_left).reverse_complement())
             left_rev_seq = str(Seq(primer_right).reverse_complement())
-            
             pattern_left_rev = f"({left_rev_seq}){{s<={maxmismatch}}}"
             pattern_right_rev = f"({right_rev_seq}){{s<={maxmismatch}}}"
-            
             left_rev_data = [
                 (m.start(), m.group())
                 for m in re.finditer(pattern_left_rev, reference_seq,
@@ -613,18 +610,15 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 for m in re.finditer(pattern_right_rev, reference_seq,
                                      flags=re.IGNORECASE, overlapped=True)
             ]
-            
             left_rev = [pos for pos, _ in left_rev_data]
             right_rev = [pos for pos, _ in right_rev_data]
 
             left_rev_actual = [seq for _, seq in left_rev_data]
             right_rev_actual = [seq for _, seq in right_rev_data]
-            
             for seq in left_rev_actual:
                 aligned, has_ambig = mismatch_alignment(left_rev_seq, seq)
                 left_rev_mismatch_map.append(aligned)
                 left_rev_has_ambig.append(has_ambig)
-                
             for seq in right_rev_actual:
                 aligned, has_ambig = mismatch_alignment(right_rev_seq, seq)
                 right_rev_mismatch_map.append(aligned)
@@ -639,7 +633,6 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             any(left_rev_has_ambig),
             any(right_rev_has_ambig),
         ])
-        
         if has_ambiguous_base and not warned:
             warnings.warn("One or more primers contain ambiguous "
                           "bases (e.g., N, R, Y, etc). "
@@ -679,7 +672,6 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             })
 
         results.append(result_row)
-        
     return pd.DataFrame(results)
 
 
