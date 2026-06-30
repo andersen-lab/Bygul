@@ -556,80 +556,97 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
         pattern_left = f"({primer_left}){{s<={maxmismatch}}}"
         pattern_right = f"({primer_right}){{s<={maxmismatch}}}"
 
-        # Forward strand search
-        left_fwd = [m.start() for m in re.finditer(pattern_left,
-                                                   reference_seq,
-                                                   flags=re.IGNORECASE,
-                                                   overlapped=True)]
-        right_fwd = [m.start() for m in re.finditer(pattern_right,
-                                                    reference_seq,
-                                                    flags=re.IGNORECASE,
-                                                    overlapped=True)]
+        # --- 1. INITIALIZE REVERSE VARIABLES UP FRONT ---
+        left_rev, right_rev = [], []
+        left_rev_actual, right_rev_actual = [], []
+        left_rev_mismatch_map, right_rev_mismatch_map = [], []
+        left_rev_has_ambig, right_rev_has_ambig = [], []
 
-        left_fwd_actual = [reference_seq[pos:pos+len(primer_left)]
-                           for pos in left_fwd]
-        right_fwd_actual = [reference_seq[pos:pos+len(primer_right)]
-                            for pos in right_fwd]
+        # --- 2. FORWARD STRAND SEARCH ---
+        left_fwd_data = [
+            (m.start(), m.group())
+            for m in re.finditer(pattern_left, reference_seq,
+                                 flags=re.IGNORECASE, overlapped=True)
+        ]
+        right_fwd_data = [
+            (m.start(), m.group())
+            for m in re.finditer(pattern_right, reference_seq,
+                                 flags=re.IGNORECASE, overlapped=True)
+        ]
+        
+        left_fwd = [pos for pos, _ in left_fwd_data]
+        right_fwd = [pos for pos, _ in right_fwd_data]
+
+        left_fwd_actual = [seq for _, seq in left_fwd_data]
+        right_fwd_actual = [seq for _, seq in right_fwd_data]
+
         left_fwd_mismatch_map = []
         left_fwd_has_ambig = []
         for seq in left_fwd_actual:
             aligned, has_ambig = mismatch_alignment(primer_left, seq)
             left_fwd_mismatch_map.append(aligned)
             left_fwd_has_ambig.append(has_ambig)
+            
         right_fwd_mismatch_map = []
         right_fwd_has_ambig = []
         for seq in right_fwd_actual:
             aligned, has_ambig = mismatch_alignment(primer_right, seq)
             right_fwd_mismatch_map.append(aligned)
             right_fwd_has_ambig.append(has_ambig)
-        # Reverse strand search
-        # get complimentary reverse of primers
-        # right and left primer change direction
-        right_rev = str(Seq(primer_left).reverse_complement())
-        left_rev = str(Seq(primer_right).reverse_complement())
-        pattern_left_rev = f"({left_rev}){{s<={maxmismatch}}}"
-        pattern_right_rev = f"({right_rev}){{s<={maxmismatch}}}"
-        # Forward strand search
-        left_rev_pos = [m.start() for m in re.finditer(pattern_left_rev,
-                                                       reference_seq,
-                                                       flags=re.IGNORECASE,
-                                                       overlapped=True)]
-        right_rev_pos = [m.start() for m in re.finditer(pattern_right_rev,
-                                                        reference_seq,
-                                                        flags=re.IGNORECASE,
-                                                        overlapped=True)]
-        left_rev_actual = [reference_seq[pos:pos+len(left_rev)]
-                           for pos in left_rev_pos]
-        right_rev_actual = [reference_seq[pos:pos+len(right_rev)]
-                            for pos in right_rev_pos]
-        left_rev_mismatch_map = []
-        left_rev_has_ambig = []
-        for seq in left_rev_actual:
-            aligned, has_ambig = mismatch_alignment(left_rev, seq)
-            left_rev_mismatch_map.append(aligned)
-            left_rev_has_ambig.append(has_ambig)
-        right_rev_mismatch_map = []
-        right_rev_has_ambig = []
-        for seq in right_rev_actual:
-            aligned, has_ambig = mismatch_alignment(right_rev, seq)
-            right_rev_mismatch_map.append(aligned)
-            right_rev_has_ambig.append(has_ambig)
 
-        # Check if any ambiguous bases are in the primers or alignments
+        # --- 3. REVERSE STRAND SEARCH (IF FORWARD FAILS) ---
+        if not left_fwd or not right_fwd:
+            # Using unique variable names (_seq) to avoid overwriting coordinate lists
+            right_rev_seq = str(Seq(primer_left).reverse_complement())
+            left_rev_seq = str(Seq(primer_right).reverse_complement())
+            
+            pattern_left_rev = f"({left_rev_seq}){{s<={maxmismatch}}}"
+            pattern_right_rev = f"({right_rev_seq}){{s<={maxmismatch}}}"
+            
+            left_rev_data = [
+                (m.start(), m.group())
+                for m in re.finditer(pattern_left_rev, reference_seq,
+                                     flags=re.IGNORECASE, overlapped=True)
+            ]
+            right_rev_data = [
+                (m.start(), m.group())
+                for m in re.finditer(pattern_right_rev, reference_seq,
+                                     flags=re.IGNORECASE, overlapped=True)
+            ]
+            
+            left_rev = [pos for pos, _ in left_rev_data]
+            right_rev = [pos for pos, _ in right_rev_data]
+
+            left_rev_actual = [seq for _, seq in left_rev_data]
+            right_rev_actual = [seq for _, seq in right_rev_data]
+            
+            for seq in left_rev_actual:
+                aligned, has_ambig = mismatch_alignment(left_rev_seq, seq)
+                left_rev_mismatch_map.append(aligned)
+                left_rev_has_ambig.append(has_ambig)
+                
+            for seq in right_rev_actual:
+                aligned, has_ambig = mismatch_alignment(right_rev_seq, seq)
+                right_rev_mismatch_map.append(aligned)
+                right_rev_has_ambig.append(has_ambig)
+
+        # --- 4. AMBIGUOUS BASE CHECK ---
         has_ambiguous_base = any([
             any(b in primer_left.upper() for b in "RYSWKMBDHVN"),
             any(b in primer_right.upper() for b in "RYSWKMBDHVN"),
-            any(left_fwd_has_ambig) if left_fwd_has_ambig else False,
-            any(right_fwd_has_ambig) if right_fwd_has_ambig else False,
-            any(left_rev_has_ambig) if left_rev_has_ambig else False,
-            any(right_rev_has_ambig) if right_rev_has_ambig else False,
+            any(left_fwd_has_ambig),
+            any(right_fwd_has_ambig),
+            any(left_rev_has_ambig),
+            any(right_rev_has_ambig),
         ])
+        
         if has_ambiguous_base and not warned:
-            warnings.warn("One or more primers contain ambiguous"
-                          "bases (e.g., N, R, Y, etc)."
+            warnings.warn("One or more primers contain ambiguous "
+                          "bases (e.g., N, R, Y, etc). "
                           "Matches may be unreliable.")
             warned = True
 
+        # --- 5. BUILD RESULT DICTIONARY ---
         result_row = row._asdict()
         result_row["ambiguous_bases"] = has_ambiguous_base
 
@@ -642,10 +659,10 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "left_match": left_fwd_mismatch_map,
                 "right_match": right_fwd_mismatch_map,
             })
-        elif left_rev_pos and right_rev_pos:
+        elif left_rev and right_rev:  # Fixed variable naming conflict here
             result_row.update({
-                "left_primer_loc": left_rev_pos,
-                "right_primer_loc": right_rev_pos,
+                "left_primer_loc": left_rev,
+                "right_primer_loc": right_rev,
                 "left_seq_actual": left_rev_actual,
                 "right_seq_actual": right_rev_actual,
                 "left_match": left_rev_mismatch_map,
@@ -662,7 +679,7 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             })
 
         results.append(result_row)
-
+        
     return pd.DataFrame(results)
 
 
