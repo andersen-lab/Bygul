@@ -17,22 +17,21 @@ def process_sample_proportions(
     proportions,
     sample_names,
     sample_paths,
-    outdir
+    outdir,
+    csv,
 ):
     """
     Processes sample proportions for read simulation.
 
     Parameters:
-        proportions (str or list): Either "NA" or comma-separated proportions.
-        sample_names (list): List of sample names.
-        sample_paths (list): List of sample file paths.
-        outdir (str): Output directory.
-
-    Returns:
-        list: Processed proportions as floats.
+        proportions (str or list): Either "NA", a comma-separated string,
+            or a list of proportions from a CSV.
     """
 
-    if proportions == "NA":
+    if csv:
+        proportions = [float(p) for p in proportions]
+
+    elif proportions == "NA":
         if len(sample_names) == 1:
             print(
                 "Only one sample provided. "
@@ -50,19 +49,19 @@ def process_sample_proportions(
 
             with open(
                 os.path.join(outdir, "sample_proportions.txt"),
-                "w"
+                "w",
             ) as file:
                 for name, proportion in zip(sample_names, proportions):
                     file.write(f"{name}: {proportion}\n")
 
     else:
-        proportions = list(map(float, str(proportions).split(",")))
+        proportions = [float(x) for x in proportions.split(",")]
 
     # Validate lengths
     if not (
-        len(sample_names) ==
-        len(proportions) ==
-        len(sample_paths)
+        len(sample_names)
+        == len(proportions)
+        == len(sample_paths)
     ):
         raise Exception(
             "Number of samples, proportions, and sample paths should match!"
@@ -92,7 +91,8 @@ def check_dir(outdir, redo):
         os.makedirs(outdir)
 
 
-def validate_simulation_args(simulation_mode, primers, reference):
+def validate_simulation_args(simulation_mode, primers, reference,
+                             proportions, proportions_csv, genomes):
     if simulation_mode == "amplicon" and primers == "NA":
         print("Primer file is required for simulation mode amplicon")
         sys.exit(1)
@@ -105,6 +105,14 @@ def validate_simulation_args(simulation_mode, primers, reference):
     if simulation_mode == "amplicon" and reference == "NA":
         print("Reference file is required for simulation mode amplicon")
         sys.exit(1)
+    if proportions_csv != "NA":
+        if proportions != "NA":
+            print("Cannot use --proportions with --csv")
+            sys.exit(1)
+
+        if genomes != "NA":
+            print("Cannot use --genomes with --csv")
+            sys.exit(1)
 
 
 def assess_genome_quality_from_fasta(fasta_path):

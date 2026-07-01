@@ -46,6 +46,17 @@ def cli():
     ),
 )
 @click.option(
+    "--csv",
+    default="NA",
+    type=click.Path(exists=True, dir_okay=False),
+    help=(
+        "Path to a CSV file containing sample paths "
+        "and proportions. The CSV should have two columns: "
+        "'sample_path' and 'proportion'. "
+        "Cannot be used together with --proportions --genomes"
+    ),
+)
+@click.option(
     "--outdir",
     default="results",
     type=click.Path(exists=False),
@@ -106,7 +117,8 @@ def simulate_proportions(
     maxmismatch,
     simulator,
     redo,
-    simulation_mode
+    simulation_mode,
+    csv
 ):
     from bygul.utils import (
         preprocess_primers,
@@ -119,7 +131,9 @@ def simulate_proportions(
         process_genome_worker
     )
     # validare simulation arugments
-    validate_simulation_args(simulation_mode, primers, reference)
+    validate_simulation_args(simulation_mode, primers,
+                             reference, proportions,
+                             csv, genomes)
     # read the reference sequence
     reference = next(SeqIO.parse(reference, "fasta"))
     # needed to pass simulation specific flags
@@ -127,10 +141,18 @@ def simulate_proportions(
     ctx = click.get_current_context()
     # check directory exists- if redo specified make again
     check_dir(outdir, redo)
-    # split the sample names and paths into a list
-    sample_names = [fp.split("/")[-1].split(".")[0]
-                    for fp in str(genomes).split(",")]
-    sample_paths = str(genomes).split(",")
+    if csv:
+        # read the CSV file and extract sample paths and proportions
+        df = pd.read_csv(csv)
+        sample_paths = df['sample_path'].tolist()
+        proportions = df['proportion'].tolist()
+        sample_names = [os.path.basename(fp).split(".")[0]
+                        for fp in sample_paths]
+    else:
+        # split the sample names and paths into a list
+        sample_names = [fp.split("/")[-1].split(".")[0]
+                        for fp in str(genomes).split(",")]
+        sample_paths = str(genomes).split(",")
     # Print information about the quality of the provided file
     for genome in sample_paths:
         assess_genome_quality_from_fasta(genome)
@@ -138,8 +160,9 @@ def simulate_proportions(
     # assign proportions randomly if not provided
     proportions = process_sample_proportions(proportions,
                                              sample_names,
-                                             sample_names,
-                                             outdir)
+                                             sample_paths,
+                                             outdir,
+                                             csv)
     # read counts defined pased on proportions
     rc = int(readcnt)
     read_cnts = [i * rc for i in proportions]
