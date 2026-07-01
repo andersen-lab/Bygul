@@ -18,7 +18,10 @@ def cli():
     allow_extra_args=True,
 ))
 @click.pass_context
-@click.argument("genomes", type=str)
+@click.option("--genomes",
+              default="NA",
+              help="Comma-separated list of"
+              "genome file paths in fasta format")
 @click.option(
     "--reference",
     default="NA",
