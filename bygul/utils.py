@@ -306,7 +306,8 @@ def create_valid_primer_combinations(df):
                 "left_match": left_match,
                 "right_match": right_match,
             }
-            for primer_start, primer_end, left_match, right_match in combinations
+            for primer_start, primer_end,
+            left_match, right_match in combinations
         )
 
     if not valid_primers:
