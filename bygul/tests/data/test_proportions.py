@@ -9,7 +9,7 @@ class ProportionTests(unittest.TestCase):
         # 1. Run the simulation
         os.system(
             "bygul simulate-proportions "
-            "bygul/tests/data/BCN-SEARCH-105346.fasta,"
+            "--genomes bygul/tests/data/BCN-SEARCH-105346.fasta,"
             "bygul/tests/data/CA-SEARCH-43254.fasta "
             "--primers bygul/tests/data/ARTIC_V4-1.bed "
             "--reference bygul/tests/data/reference.fasta "
