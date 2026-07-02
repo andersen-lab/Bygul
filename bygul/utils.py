@@ -28,7 +28,7 @@ def process_sample_proportions(
             or a list of proportions from a CSV.
     """
 
-    if csv:
+    if csv != "NA":
         proportions = [float(p) for p in proportions]
 
     elif proportions == "NA":
