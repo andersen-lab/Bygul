@@ -290,54 +290,41 @@ def merge_fastq_files(fastq_file, output_file):
 
 
 def create_valid_primer_combinations(df):
-    # Ensure the column exists before assignment
-    if "valid_combinations" not in df.columns:
-        df["valid_combinations"] = None
+    valid_primers = []
 
-    valid_primers = []  # Use a list instead of concatenating DataFrames
+    for row in df.itertuples(index=False):
+        combinations = evaluate_matches(
+            zip(row.left_primer_loc, row.left_match),
+            zip(row.right_primer_loc, row.right_match),
+        )
 
-    for i in range(len(df)):
-        # Pair coordinates with their mismatch maps
-        left_coords = zip(df.at[i, "left_primer_loc"],
-                          df.at[i, "left_match"])
-        right_coords = zip(df.at[i, "right_primer_loc"],
-                           df.at[i, "right_match"])
-        # Safe assignment using .at[]
-        df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
-                                                          right_coords)
-        for (
-            primer_start,
-            primer_end,
-            left_match,
-            right_match
-        ) in df.at[i, "valid_combinations"]:
-            valid_primers.append(
-                {
-                    "amplicon_number": df.at[i, "amplicon_number"],
-                    "primer_start": primer_start,
-                    "primer_end": primer_end,
-                    "left_match": left_match,
-                    "right_match": right_match
-                }
-            )
+        valid_primers.extend(
+            {
+                "amplicon_number": row.amplicon_number,
+                "primer_start": primer_start,
+                "primer_end": primer_end,
+                "left_match": left_match,
+                "right_match": right_match,
+            }
+            for primer_start, primer_end, left_match, right_match in combinations
+        )
 
-    # Check if we found any valid primers
     if not valid_primers:
         raise ValueError(
-            "No primer matches found, please check your primer file.")
+            "No primer matches found, please check your primer file."
+        )
 
-    # Convert collected data to DataFrame efficiently
-    valid_primers_df = pd.DataFrame.from_records(valid_primers)
-    # Merge with original DataFrame to include additional columns
-    df = df[["amplicon_number", "primer_seq_x",
-             "primer_seq_y", "ambiguous_bases"]]
-    all_amplicons = df.merge(
-        valid_primers_df,
-        how="left",
-        on="amplicon_number",
+    return (
+        df[[
+            "amplicon_number",
+            "primer_seq_x",
+            "primer_seq_y",
+            "ambiguous_bases",
+        ]]
+        .merge(pd.DataFrame(valid_primers),
+               on="amplicon_number",
+               how="left")
     )
-
-    return all_amplicons
 
 
 def preprocess_primers(primer_file, reference):
