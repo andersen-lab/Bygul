@@ -48,7 +48,7 @@ def cli():
 @click.option(
     "--csv",
     default="NA",
-    type=click.Path(exists=True, dir_okay=False),
+    type=str,
     help=(
         "Path to a CSV file containing sample paths "
         "and proportions. The CSV should have two columns: "
