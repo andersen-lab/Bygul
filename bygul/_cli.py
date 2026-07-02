@@ -139,9 +139,7 @@ def simulate_proportions(
     # needed to pass simulation specific flags
     extra_simulator_flags = ctx.args
     ctx = click.get_current_context()
-    # check directory exists- if redo specified make again
-    check_dir(outdir, redo)
-    if csv:
+    if csv != "NA":
         # read the CSV file and extract sample paths and proportions
         df = pd.read_csv(csv)
         sample_paths = df['sample_path'].tolist()
