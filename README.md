@@ -1,12 +1,12 @@
 # Bygul: Amplicon & Metagenomics Read Simulator
 
-**Bygul** is a Python 3 tool designed for simulating sequencing reads in wastewater surveillance and other metagenomic applications. It allows users to simulate complex multi-sample datasets with customizable proportions using industry-standard backends like `wgsim` and `mason`.
+**Bygul** is a Python 3 tool designed for simulating sequencing reads in wastewater surveillance and other metagenomic applications. It allows users to simulate complex multi-sample datasets with customizable proportions using industry-standard backends like `wgsim`, `mason`, and ART Illumina.
 
 ---
 
 ## 🏗 Installation
 
-Bygul requires **Python 3**. Since it relies on external simulators (`wgsim` and `mason`), we recommend using Conda to manage dependencies.For more info on <a href="https://github.com/lh3/wgsim">wgsim</a> and <a href="https://github.com/seqan/seqan/blob/main/apps/mason2/README.mason_simulator">mason simulator</a> please check their documentations.
+Bygul requires **Python 3**. Since it relies on external simulators (`wgsim`, `mason`, and ART), we recommend using Conda to manage dependencies.For more info on <a href="https://github.com/lh3/wgsim">wgsim</a>, <a href="https://github.com/seqan/seqan/blob/main/apps/mason2/README.mason_simulator">mason simulator</a>, and <a href="https://www.niehs.nih.gov/research/resources/software/biostatistics/art">ART</a> please check their documentations.
 
 ### Option 1: Via Conda (Recommended)
 ```bash
@@ -17,7 +17,7 @@ conda create -n bygul bioconda::bygul
 ```bash
 pip install bygul
 ```
-*Note: Some binary dependencies (wgsim/mason) may need to be installed manually or built from source if using this method.*
+*Note: Some binary dependencies (wgsim/mason/ART) may need to be installed manually or built from source if using this method.*
 
 ### Option 3: Local Build from Source
 ```bash
@@ -43,9 +43,10 @@ bygul simulate-proportions [SAMPLE1.fasta,SAMPLE2.fasta] --primers [primer.bed] 
     bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
     ```
 * **Switching Simulators:**
-    Use `mason` instead of the default `wgsim`.
+    Use `mason` or `art` instead of the default `wgsim`.
     ```bash
     bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --simulator mason
+    bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --simulator art
     ```
 * **Custom Error Rates & Lengths:**
     Pass simulator-specific parameters (e.g. indel fraction `-R`) directly.
@@ -76,11 +77,13 @@ Bygul acts as a wrapper. While most flags are passed directly to the underlying 
 - `--readcnt`: Number of reads per amplicon.
 - `--wgsim_insert_size`: Insert size for wgsim.
 - `--wgsim_read_length` / `--wgsim_error_rate`.
+- `--art_read_length` / `--art_insert_size` / `--art_insert_sd` / `--art_seq_system`: paired-end ART Illumina defaults.
 
 To see all available backend flags, run:
 ```bash
 wgsim --help
 mason_simulator --help
+art_illumina --help
 ```
 Please note that some dependencies are not available through pypi.
 You need to install them using conda or build from source.
@@ -106,9 +109,10 @@ Simulate reads from different samples without defining proportions (will be assi
 bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
  ```
 Simulate reads with user-defined proportions and specifing read simulator.
-bygul uses wgsim as a simulator but you can change it to mason.
+bygul uses wgsim as a simulator but you can change it to mason or ART.
  ```
 bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --simulator mason
+bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --simulator art --art_read_length 150
  ```
 Simulate reads with user-defined proportions and number of reads per amplicon.
  ```
@@ -126,7 +130,7 @@ It is recommended to define the number of reads per amplicon to be greater than 
 ### 🧬 Input BED File Format
 The pipeline expects a tab-delimited BED file where the first six columns represent standard genomic coordinates (`chrom`, `chromStart`, `chromEnd`, `name`, `poolName`, `strand`). Crucially, the fourth column (`name`) must follow a strict naming convention to prevent downstream parsing failures in variant-calling tools: **`[Scheme-Name]_[AmpliconNumber]_[Direction]_[OptionalSuffix]`** (e.g., `SARS-CoV-2_3_LEFT` or `SARS-CoV-2_3_LEFT_alt`). To ensure structural boundaries are parsed correctly, the prefix must not contain underscores, and any optional trailing modifiers must be restricted to standard alternative tags (`_alt`, `_ALT1`) or tracking indexes (`_0`, `_1`). Multi-level pool formatting, such as `SARS-CoV-2_400_1_LEFT_1`, is malformed and will fail validation.. The maximum number of mismatches allowed for each primer sequence is 1 SNP. To change this number, you may use the `--maxmismatches` flag.
 #### Complete set of available parameters
-To learn more about how to adjust other parameters for the simulator please read the documentation for wgsim and mason simulator. Users can pass any simulator parameter directly in their command. The only parameters set through bygul are `--readcnt` and `--wgsim_insert_size` for amplicon sequencing mode.
+To learn more about how to adjust other parameters for the simulator please read the documentation for wgsim, mason simulator, and ART. Users can pass any simulator parameter directly in their command. The only parameters set through bygul are `--readcnt`, `--wgsim_insert_size`, `--wgsim_read_length`, `--wgsim_error_rate`, `--art_read_length`, `--art_insert_size`, `--art_insert_sd`, and `--art_seq_system`.
 #### Simulated reads output
 Simulated reads from all samples are located in `provided_output_path/reads.fastq`
 #### Information about amplicon dropouts
@@ -142,7 +146,8 @@ Simulate reads from different samples without defining proportions (will be assi
 bygul simulate-proportions sample.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
  ```
 
-Specify proportions for each sample and add other simulator specific parameters. To access simulator parameters, please read wgsim and mason documentation.
+Specify proportions for each sample and add other simulator specific parameters. To access simulator parameters, please read wgsim, mason, and ART documentation.
  ```
 bygul simulate-proportions sample.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
+bygul simulate-proportions sample.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator art --art_read_length 150
  ```

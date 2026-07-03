@@ -3,6 +3,7 @@ regex
 numpy
 pandas
 click
+art
 wgsim
 pytest
 minimap2
