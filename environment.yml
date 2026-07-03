@@ -20,6 +20,7 @@ dependencies:
   - libuuid=2.38.1=h0b41bf4_0
   - libxcrypt=4.4.36=hd590300_1
   - libzlib=1.2.13=h4ab18f5_6
+  - art=2016.06.05
   - mason=2.0.9=hdcf5f25_3
   - ncurses=6.5=he02047a_1
   - openssl=3.3.2=hb9d3cd8_0
