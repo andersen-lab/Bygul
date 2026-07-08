@@ -165,7 +165,7 @@ def simulate_proportions(
                                              csv)
     # read counts defined pased on proportions
     rc = int(readcnt)
-    read_cnts = [i * rc for i in proportions]
+    read_cnts = np.random.multinomial(rc, proportions)
 
     # Global outputs for merging
     output_path1 = os.path.join(os.path.abspath(outdir), "reads_1.fastq")
