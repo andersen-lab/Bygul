@@ -123,7 +123,6 @@ def simulate_proportions(
     from bygul.utils import (
         preprocess_primers,
         merge_fastq_files,
-        assess_genome_quality_from_fasta,
         validate_simulation_args,
         check_dir,
         process_sample_proportions,
