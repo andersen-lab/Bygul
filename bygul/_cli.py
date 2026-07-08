@@ -233,8 +233,8 @@ def check_primers(genomes, primers, reference, maxmismatch):
         find_closest_primer_match,
         create_valid_primer_combinations,
     )
-
-    assess_genome_quality_from_fasta(genomes)
+    genome_seqs = list(SeqIO.parse(genomes, "fasta"))
+    assess_genome_quality_from_fasta(genome_seqs)
     # read the reference sequence
     reference = next(SeqIO.parse(reference, "fasta"))
     primer_df = preprocess_primers(primers, reference)
@@ -242,7 +242,7 @@ def check_primers(genomes, primers, reference, maxmismatch):
     all_results = []
 
     # Parse ALL sequences in the multifasta
-    for genome_record in SeqIO.parse(genomes, "fasta"):
+    for genome_record in genome_seqs:
         genome_id = genome_record.id
         genome_seq = str(genome_record.seq)
         df = find_closest_primer_match(primer_df, genome_seq,
