@@ -133,7 +133,7 @@ def validate_simulation_args(simulation_mode, primers, reference,
             sys.exit(1)
 
 
-def assess_genome_quality_from_fasta(fasta_path):
+def assess_genome_quality_from_fasta(sequence):
     """
     Parses a FASTA genome file and assesses quality by:
     - Counting ambiguous (non-ACGT) bases.
@@ -142,7 +142,7 @@ def assess_genome_quality_from_fasta(fasta_path):
     - Printing a genome quality summary.
 
     Parameters:
-        fasta_path (str): Path to the FASTA file.
+        sequence (SeqRecord): The FASTA sequence record.
 
     Returns:
         dict: {
@@ -150,15 +150,12 @@ def assess_genome_quality_from_fasta(fasta_path):
             'contig_lengths': dict of {contig_id: length}
         }
     """
-
     ambiguous_bases = {'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N'}
     total_ambiguous = 0
     contig_lengths = {}
-
-    for record in SeqIO.parse(fasta_path, "fasta"):
-        seq = str(record.seq).upper()
-        contig_lengths[record.id] = len(seq)
-        total_ambiguous += sum(1 for base in seq if base in ambiguous_bases)
+    seq = str(sequence.seq).upper()
+    contig_lengths[sequence.id] = len(seq)
+    total_ambiguous += sum(1 for base in seq if base in ambiguous_bases)
 
     report = {
         'total_ambiguous_bases': total_ambiguous,
@@ -171,19 +168,19 @@ def assess_genome_quality_from_fasta(fasta_path):
     # Warnings
     if num_ambiguous > 0:
         warnings.warn(
-            f"{fasta_path}: Contains {num_ambiguous} ambiguous base(s). "
+            f"{sequence.id}: Contains {num_ambiguous} ambiguous base(s). "
             "Please choose a better quality genome."
         )
 
     if num_contigs > 1:
         warnings.warn(
-            f"{fasta_path}: Contains {num_contigs} contigs. "
+            f"{sequence.id}: Contains {num_contigs} contigs. "
             "Does your organism have more than one chromosome? "
             "Are you providing high quality assemblies?"
         )
 
     # Print results
-    print(f"\nGenome: {fasta_path}")
+    print(f"\nGenome: {sequence.id}")
     print(f"  Total ambiguous bases: {num_ambiguous}")
     print("  Contig lengths:")
 
@@ -756,8 +753,10 @@ def process_amplicon_worker(args):
      extra_simulator_flags) = args
 
     sample_amplicons_list = []
-
-    for genome_seq in SeqIO.parse(path, "fasta"):
+    genome_seqs = list(SeqIO.parse(path, "fasta"))
+    for genome_seq in genome_seqs:
+        # Print information about the quality of the provided file
+        assess_genome_quality_from_fasta(genome_seq)
         contig_df = find_closest_primer_match(
             df_primers_template.copy(),
             str(genome_seq.seq),

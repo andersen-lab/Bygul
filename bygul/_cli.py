@@ -153,9 +153,6 @@ def simulate_proportions(
         sample_paths = str(genomes).split(",")
         # check directory exists- if redo specified make again
     check_dir(outdir, redo, sample_names)
-    # Print information about the quality of the provided file
-    for genome in sample_paths:
-        assess_genome_quality_from_fasta(genome)
     # process the proportions and give warnings if necessary
     # assign proportions randomly if not provided
     proportions = process_sample_proportions(proportions,
