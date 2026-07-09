@@ -748,12 +748,11 @@ def write_fasta_group(group, amplicon_number, output_dir):
 
 def process_amplicon_worker(args):
     """Worker for the 'amplicon' simulation mode."""
-    (name, path, cnt, df_primers_template, maxmismatch, outdir,
+    (name, genome_seqs, cnt, df_primers_template, maxmismatch, outdir,
      simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
      extra_simulator_flags) = args
 
     sample_amplicons_list = []
-    genome_seqs = list(SeqIO.parse(path, "fasta"))
     for genome_seq in genome_seqs:
         # Print information about the quality of the provided file
         assess_genome_quality_from_fasta(genome_seq)
@@ -786,7 +785,8 @@ def process_amplicon_worker(args):
         sample_amplicons_list.append(all_amplicons)
 
     if not sample_amplicons_list:
-        return ("warning", f"Warning: No sequences found in {path}")
+        return ("warning",
+                f"Warning: No sequences found in {name}")
 
     full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
     amp_out_dir = os.path.join(outdir, name, "amplicons")

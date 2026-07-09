@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
-
+from collections import defaultdict
 
 @click.group(context_settings={"show_default": True})
 @click.version_option("3.2.0")
@@ -54,6 +54,16 @@ def cli():
         "and proportions. The CSV should have two columns: "
         "'sample_path' and 'proportion'. "
         "Cannot be used together with --proportions --genomes"
+    ),
+)
+@click.option(
+    "--multifasta",
+    default="NA",
+    type=str,
+    help=(
+        "Path to a multifasta file containing all sample sequences"
+        "Cannot be used together with --genomes and --proportions."
+        "Must be used together with --csv"
     ),
 )
 @click.option(
@@ -118,7 +128,8 @@ def simulate_proportions(
     simulator,
     redo,
     simulation_mode,
-    csv
+    csv,
+    multifasta
 ):
     from bygul.utils import (
         preprocess_primers,
@@ -132,31 +143,40 @@ def simulate_proportions(
     # validare simulation arugments
     validate_simulation_args(simulation_mode, primers,
                              reference, proportions,
-                             csv, genomes)
+                             csv, genomes, multifasta)
     # read the reference sequence
     reference = next(SeqIO.parse(reference, "fasta"))
     # needed to pass simulation specific flags
     extra_simulator_flags = ctx.args
     ctx = click.get_current_context()
-    if csv != "NA":
-        # read the CSV file and extract sample paths and proportions
+    genome_map = defaultdict(list)
+    if csv != "NA" and multifasta != "NA":
         df = pd.read_csv(csv)
-        sample_paths = df['sample_path'].tolist()
-        proportions = df['proportion'].tolist()
-        sample_names = [os.path.basename(fp).split(".")[0]
-                        for fp in sample_paths]
+        sample_names = df["sample_name"].tolist()
+        proportions = df["proportion"].tolist()
+        for record in SeqIO.parse(multifasta, "fasta"):
+            sample = record.id.split("_")[0]
+            genome_map[sample].append(record)
+        # Ensure every sample in the CSV exists
+        missing = set(sample_names) - set(genome_map)
+        if missing:
+            raise click.ClickException(
+                "Samples missing from multifasta:"
+                f" {', '.join(sorted(missing))}"
+            )
     else:
-        # split the sample names and paths into a list
-        sample_names = [fp.split("/")[-1].split(".")[0]
-                        for fp in str(genomes).split(",")]
         sample_paths = str(genomes).split(",")
-        # check directory exists- if redo specified make again
+        for path in sample_paths:
+            for record in SeqIO.parse(path, "fasta"):
+                sample = record.id.split("_")[0]
+                genome_map[sample].append(record)
+        sample_names = list(genome_map.keys())
+    # check directory exists- if redo specified make again
     check_dir(outdir, redo, sample_names)
     # process the proportions and give warnings if necessary
     # assign proportions randomly if not provided
     proportions = process_sample_proportions(proportions,
                                              sample_names,
-                                             sample_paths,
                                              outdir,
                                              csv)
     # read counts defined pased on proportions
@@ -172,10 +192,12 @@ def simulate_proportions(
         df_primers_template = preprocess_primers(primers, reference)
 
         task_args = [
-            (name, path, cnt, df_primers_template, maxmismatch, outdir,
-             simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+            (name, genome_map[name], cnt,
+             df_primers_template, maxmismatch, outdir,
+             simulator, wgsim_insert_size,
+             wgsim_read_length, wgsim_error_rate,
              extra_simulator_flags)
-            for name, path, cnt in zip(sample_names, sample_paths, read_cnts)
+            for name, cnt in zip(sample_names, read_cnts)
         ]
         worker_func = process_amplicon_worker
 
