@@ -1,3 +1,3 @@
-﻿sample_path,proportion
-bygul/tests/data/ATM-2FFMD73N3.fasta,0.54
-bygul/tests/data/CA-SEARCH-43254.fasta,0.46
+﻿sample_name,proportion
+ATM-2FFMD73N3,0.54
+CA-SEARCH-43254,0.46
