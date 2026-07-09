@@ -16,7 +16,6 @@ import shutil
 def process_sample_proportions(
     proportions,
     sample_names,
-    sample_paths,
     outdir,
     csv,
 ):
@@ -61,7 +60,6 @@ def process_sample_proportions(
     if not (
         len(sample_names)
         == len(proportions)
-        == len(sample_paths)
     ):
         raise Exception(
             "Number of samples, proportions, and sample paths should match!"
@@ -110,7 +108,8 @@ def check_dir(outdir, redo, sample_names):
 
 
 def validate_simulation_args(simulation_mode, primers, reference,
-                             proportions, proportions_csv, genomes):
+                             proportions, proportions_csv, genomes,
+                             multifasta):
     if simulation_mode == "amplicon" and primers == "NA":
         print("Primer file is required for simulation mode amplicon")
         sys.exit(1)
@@ -131,6 +130,9 @@ def validate_simulation_args(simulation_mode, primers, reference,
         if genomes != "NA":
             print("Cannot use --genomes with --csv")
             sys.exit(1)
+    if multifasta != "NA" and proportions_csv == "NA":
+        print("--multifasta must be used together with --csv.")
+        sys.exit(1)
 
 
 def assess_genome_quality_from_fasta(sequence):
