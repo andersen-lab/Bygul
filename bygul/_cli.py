@@ -248,7 +248,16 @@ def simulate_proportions(
     show_default=True,
     help="Maximum number of mismatches allowed in primer region",
 )
-def check_primers(genomes, primers, reference, maxmismatch):
+@click.option(
+    "--outdir",
+    default=".",
+    type=click.Path(exists=False),
+    help="Output directory",
+    show_default=True,
+)
+def check_primers(genomes, primers,
+                  reference, maxmismatch,
+                  outdir):
     from bygul.utils import (
         assess_genome_quality_from_fasta,
         preprocess_primers,
