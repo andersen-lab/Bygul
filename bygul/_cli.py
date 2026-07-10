@@ -259,10 +259,8 @@ def check_primers(genomes, primers,
                   reference, maxmismatch,
                   outdir):
     from bygul.utils import (
-        assess_genome_quality_from_fasta,
         preprocess_primers,
-        find_closest_primer_match,
-        create_valid_primer_combinations,
+        process_primer_check_worker,
     )
     genome_seqs = list(SeqIO.parse(genomes, "fasta"))
     assess_genome_quality_from_fasta(genome_seqs)
