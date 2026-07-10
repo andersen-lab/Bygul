@@ -262,42 +262,57 @@ def check_primers(genomes, primers,
         preprocess_primers,
         process_primer_check_worker,
     )
-    genome_seqs = list(SeqIO.parse(genomes, "fasta"))
-    assess_genome_quality_from_fasta(genome_seqs)
     # read the reference sequence
     reference = next(SeqIO.parse(reference, "fasta"))
-    primer_df = preprocess_primers(primers, reference)
-    print("Reading and preprocessing the primer file...")
-    all_results = []
+    genome_map = defaultdict(list)
+    for record in SeqIO.parse(genomes, "fasta"):
+        sample = record.id.split("_")[0]
+        genome_map[sample].append(record)
+    df_primers_template = preprocess_primers(primers, reference)
+    task_args = [
+        (name, genome_map[name],
+            df_primers_template, maxmismatch, outdir)
+        for name in genome_map.keys()
+    ]
+    worker_func = process_primer_check_worker
 
-    # Parse ALL sequences in the multifasta
-    for genome_record in genome_seqs:
-        genome_id = genome_record.id
-        genome_seq = str(genome_record.seq)
-        df = find_closest_primer_match(primer_df, genome_seq,
-                                       maxmismatch)
-        all_amplicons = create_valid_primer_combinations(df)
-        all_amplicons = all_amplicons.fillna(0)
-        all_amplicons["amplicon_length"] = np.where(
-                    (all_amplicons["primer_start"] != 0)
-                    & (all_amplicons["primer_end"] != 0),
-                    all_amplicons["primer_end"]
-                    - all_amplicons["primer_start"]
-                    + all_amplicons["primer_seq_y"].str.len(),
-                    0,
-                )
-        all_amplicons["genome_id"] = genome_id
+    # Run Parallel Pool Execution
+    print("Spinning up parallel execution for "
+          f"{len(genome_map.keys())} samples...")
 
-        all_results.append(all_amplicons)
-        # Combine results from all fasta entries
-    if all_results:
-        final_df = pd.concat(all_results, ignore_index=True)
+    dfs = []
+    with ProcessPoolExecutor() as executor:
+        futures = {
+            executor.submit(worker_func, arg): arg[0]
+            for arg in task_args
+        }
+
+        with tqdm(total=len(genome_map.keys()),
+                  desc="Simulation progress...") as pbar:
+            for future in as_completed(futures):
+                sample_name = futures[future]
+                try:
+                    status, result = future.result()
+
+                    if status == "success":
+                        print(f"Successfully processed sample {sample_name}")
+                        dfs.append(result)   # result is the DataFrame
+
+                    elif status == "warning":
+                        print(f"\n[{sample_name}] {result}")
+
+                except Exception as e:
+                    print(f"\nError processing sample {sample_name}: {e}")
+
+                finally:
+                    pbar.update(1)
+
+    # Concatenate all successful DataFrames
+    if dfs:
+        final_df = pd.concat(dfs, ignore_index=True)
     else:
         final_df = pd.DataFrame()
-    final_df.to_csv(
-        os.path.join("amplicon_stats.csv"),
-        index=False,
-    )
+    final_df.to_csv(os.path.join(outdir, "amplicon_stats.csv"), index=False)
 
 
 if __name__ == "__main__":
