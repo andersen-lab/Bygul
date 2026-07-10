@@ -7,6 +7,7 @@ import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from collections import defaultdict
 
+
 @click.group(context_settings={"show_default": True})
 @click.version_option("3.2.0")
 def cli():
