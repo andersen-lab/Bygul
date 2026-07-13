@@ -91,6 +91,7 @@ class ProportionTests(unittest.TestCase):
                 "bygul simulate-proportions "
                 "--csv bygul/tests/data/sample_proportions.csv "
                 "--multifasta bygul/tests/data/sample_genomes.fasta "
+                "--primers bygul/tests/data/ARTIC_V4-1.bed "
                 "--redo "
                 "--simulator mason "
                 "--illumina-read-length 200"
