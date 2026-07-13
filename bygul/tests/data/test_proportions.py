@@ -66,13 +66,13 @@ class ProportionTests(unittest.TestCase):
         # Test explicit --proportions workflow
         self.assertEqual(
             os.system(
-                "bygul simulate-proportions "
-                "--genomes bygul/tests/data/BCN-SEARCH-105346.fasta,"
-                "bygul/tests/data/CA-SEARCH-43254.fasta "
-                "--primers bygul/tests/data/ARTIC_V4-1.bed "
-                "--reference bygul/tests/data/reference.fasta "
-                "--proportions 0.8,0.2 "
-                "--redo"
+            "bygul simulate-proportions "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
+            "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
+            "bygul/tests/data/KR-SEARCH-120354.fasta "
+            "--proportions 0.8,0.2 --redo --simulator mason "
+            "--reference bygul/tests/data/reference.fasta "
+            "--illumina-read-length 200"
             ),
             0,
         )
@@ -88,14 +88,13 @@ class ProportionTests(unittest.TestCase):
         # Test CSV + multifasta workflow
         self.assertEqual(
             os.system(
-                "bygul simulate-proportions "
-                "--csv bygul/tests/data/sample_proportions.csv "
-                "--multifasta bygul/tests/data/sample_genomes.fasta "
-                "--primers bygul/tests/data/ARTIC_V4-1.bed "
-                "--reference bygul/tests/data/reference.fasta "
-                "--redo "
-                "--simulator mason "
-                "--illumina-read-length 200"
+            "bygul simulate-proportions "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
+            "--csv bygul/tests/data/sample_proportions.csv "
+            "--multifasta bygul/tests/data/sample_genomes.fasta "
+            "--redo --simulator mason "
+            "--reference bygul/tests/data/reference.fasta "
+            "--illumina-read-length 200"
             ),
             0,
         )
