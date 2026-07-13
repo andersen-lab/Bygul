@@ -748,6 +748,50 @@ def write_fasta_group(group, amplicon_number, output_dir):
         )
 
 
+def process_primer_check_worker(args):
+    (name, genome_seqs, df_primers_template,
+     maxmismatch, outdir) = args
+
+    sample_amplicons_list = []
+    for genome_seq in genome_seqs:
+        # Print information about the quality of the provided file
+        assess_genome_quality_from_fasta(genome_seq)
+        contig_df = find_closest_primer_match(
+            df_primers_template.copy(),
+            str(genome_seq.seq),
+            maxmismatch
+        )
+        all_amplicons = create_valid_primer_combinations(contig_df)
+        all_amplicons = all_amplicons.fillna(0)
+
+        all_amplicons["amplicon_length"] = np.where(
+            (all_amplicons["primer_start"] != 0) &
+            (all_amplicons["primer_end"] != 0),
+            all_amplicons["primer_end"] -
+            all_amplicons["primer_start"] +
+            all_amplicons["primer_seq_y"].str.len(),
+            0,
+        )
+
+        all_amplicons["amplicon_sequence"] = all_amplicons.apply(
+            lambda row: make_amplicon(
+                row["primer_start"],
+                row["primer_end"],
+                row["primer_seq_y"],
+                genome_seq.seq,
+            ), axis=1,
+        )
+        all_amplicons["contig_id"] = genome_seq.id
+        sample_amplicons_list.append(all_amplicons)
+
+    if not sample_amplicons_list:
+        return ("warning",
+                f"Warning: No sequences found in {name}")
+
+    full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
+    return ("success", full_sample_df)
+
+
 def process_amplicon_worker(args):
     """Worker for the 'amplicon' simulation mode."""
     (name, genome_seqs, cnt, df_primers_template, maxmismatch, outdir,
