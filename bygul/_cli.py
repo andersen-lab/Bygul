@@ -156,7 +156,7 @@ def simulate_proportions(
         sample_names = df["sample_name"].tolist()
         proportions = df["proportion"].tolist()
         for record in SeqIO.parse(multifasta, "fasta"):
-            sample = record.id.split("_")[0]
+            sample = record.id.split("|")[0]
             genome_map[sample].append(record)
         # Ensure every sample in the CSV exists
         missing = set(sample_names) - set(genome_map)
@@ -169,7 +169,7 @@ def simulate_proportions(
         sample_paths = str(genomes).split(",")
         for path in sample_paths:
             for record in SeqIO.parse(path, "fasta"):
-                sample = record.id.split("_")[0]
+                sample = record.id.split("|")[0]
                 genome_map[sample].append(record)
         sample_names = list(genome_map.keys())
     # check directory exists- if redo specified make again
@@ -200,6 +200,7 @@ def simulate_proportions(
              extra_simulator_flags)
             for name, cnt in zip(sample_names, read_cnts)
         ]
+
         worker_func = process_amplicon_worker
 
     else:
