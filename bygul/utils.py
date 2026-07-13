@@ -20,24 +20,39 @@ def process_sample_proportions(
     csv,
 ):
     """
-    Processes sample proportions for read simulation.
+    Process sample proportions for read simulation.
 
-    Parameters:
-        proportions (str or list): Either "NA", a comma-separated string,
-            or a list of proportions from a CSV.
+    Parameters
+    ----------
+    proportions : str | list
+        Either:
+        - "NA" to generate/default proportions,
+        - a comma-separated string of proportions,
+        - or a list of proportions (from a CSV).
+    sample_names : list[str]
+        Names of the samples.
+    outdir : str
+        Output directory.
+    csv : str
+        Indicates whether proportions came from a CSV ("NA" if not).
+
+    Returns
+    -------
+    list[float]
+        Validated sample proportions.
     """
 
+    # Proportions supplied from CSV
     if csv != "NA":
         proportions = [float(p) for p in proportions]
 
+    # No proportions supplied
     elif proportions == "NA":
         if len(sample_names) == 1:
             print(
-                "Only one sample provided. "
-                "Using 1.0 as the sample proportion."
+                "Only one sample provided. Using 1.0 as the sample proportion."
             )
             proportions = [1.0]
-
         else:
             print(
                 "Read simulation proportions not provided. "
@@ -46,30 +61,24 @@ def process_sample_proportions(
 
             proportions = generate_random_values(len(sample_names))
 
-            with open(
-                os.path.join(outdir, "sample_proportions.txt"),
-                "w",
-            ) as file:
+            output_file = os.path.join(outdir, "sample_proportions.txt")
+            with open(output_file, "w") as f:
                 for name, proportion in zip(sample_names, proportions):
-                    file.write(f"{name}: {proportion}\n")
+                    f.write(f"{name}: {proportion}\n")
 
+    # Comma-separated proportions from CLI
     else:
-        proportions = [float(x) for x in proportions.split(",")]
+        proportions = [float(p) for p in proportions.split(",")]
 
-    # Validate lengths
-    if not (
-        len(sample_names)
-        == len(proportions)
-    ):
-        raise Exception(
-            "Number of samples, proportions, and sample paths should match!"
+    if len(sample_names) != len(proportions):
+        print("sample length:", len(sample_names))
+        print("proportions length:", len(proportions))
+        raise ValueError(
+            "The number of sample names must match the number of proportions."
         )
 
-    # Validate proportions sum
-    if round(sum(proportions), 6) != 1.0:
-        raise Exception(
-            "Sum of all proportions should equal 1.0!"
-        )
+    if abs(sum(proportions) - 1.0) > 1e-6:
+        raise ValueError("Sample proportions must sum to 1.0.")
 
     return proportions
 
