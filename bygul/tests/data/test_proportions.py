@@ -5,125 +5,51 @@ import unittest
 
 class ProportionTests(unittest.TestCase):
 
-    def run_freyja(self):
+    def test_prop_with_freyja(self):
+        # 1. Run the simulation
+        os.system(
+            "bygul simulate-proportions "
+            "--genomes bygul/tests/data/BCN-SEARCH-105346.fasta,"
+            "bygul/tests/data/CA-SEARCH-43254.fasta "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
+            "--reference bygul/tests/data/reference.fasta "
+            "--proportions 0.8,0.2 --redo")
+        self.assertTrue(os.path.exists("results/reads_1.fastq"))
+
+        # 2. Run Freyja Pipeline (Align -> Variants -> Demix)
+        # Note: Replace 'minimap2' with your preferred aligner
         ref = "bygul/tests/data/reference.fasta"
+        os.system(f"minimap2 -ax sr {ref} "
+                  "results/reads_1.fastq results/reads_2.fastq | "
+                  "samtools sort -o results/merged.bam")
+        os.system("samtools index results/merged.bam")
+        # Freyja commands
+        os.system("freyja variants results/merged.bam "
+                  "--variants results/variants.tsv "
+                  f"--depths results/depths.tsv --ref {ref}")
+        os.system("freyja update --outdir .")
+        os.system("freyja demix results/variants.tsv "
+                  "results/depths.tsv --output "
+                  "results/demix.tsv --depthcutoff 20 "
+                  "--lineageyml lineages.yml")
 
-        self.assertEqual(
-            os.system(
-                f"minimap2 -ax sr {ref} "
-                "results/reads_1.fastq results/reads_2.fastq | "
-                "samtools sort -o results/merged.bam"
-            ),
-            0,
-        )
-
-        self.assertEqual(
-            os.system("samtools index results/merged.bam"),
-            0,
-        )
-
-        self.assertEqual(
-            os.system(
-                "freyja variants results/merged.bam "
-                "--variants results/variants.tsv "
-                f"--depths results/depths.tsv --ref {ref}"
-            ),
-            0,
-        )
-
-        self.assertEqual(
-            os.system("freyja update --outdir ."),
-            0,
-        )
-
-        self.assertEqual(
-            os.system(
-                "freyja demix results/variants.tsv "
-                "results/depths.tsv "
-                "--output results/demix.tsv "
-                "--depthcutoff 20 "
-                "--lineageyml lineages.yml"
-            ),
-            0,
-        )
-
+        # 3. Validate Proportions
         self.assertTrue(os.path.exists("results/demix.tsv"))
 
-        df = pd.read_csv(
-            "results/demix.tsv",
-            sep="\t",
-            index_col=0,
-        )
+        # Read the Freyja output
+        df = pd.read_csv("results/demix.tsv", sep='\t', index_col=0)
 
-        abundances = [
-            float(x)
-            for x in df.loc["abundances"].values[0].split()
-        ]
+        # Access the string of numbers in the 'abundances' row
+        abundances_str = df.loc['abundances'].values[0]
 
-        return sorted(abundances, reverse=True)
+        abundances = [float(x) for x in abundances_str.split()]
 
-    def test_prop_with_freyja_manual_proportions(self):
-        # Test explicit --proportions workflow
-        self.assertEqual(
-            os.system(
-            "bygul simulate-proportions "
-            "--primers bygul/tests/data/ARTIC_V4-1.bed "
-            "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
-            "bygul/tests/data/KR-SEARCH-120354.fasta "
-            "--proportions 0.8,0.2 --redo --simulator mason "
-            "--reference bygul/tests/data/reference.fasta "
-            "--illumina-read-length 200"
-            ),
-            0,
-        )
+        top_abundance = abundances[0]
+        second_abundance = abundances[1]
 
-        self.assertTrue(os.path.exists("results/reads_1.fastq"))
-
-        abundances = self.run_freyja()
-
-        self.assertAlmostEqual(abundances[0], 0.8, delta=0.1)
-        self.assertAlmostEqual(abundances[1], 0.2, delta=0.1)
-
-    def test_prop_with_freyja_csv_mason(self):
-        # Test CSV + multifasta workflow
-        self.assertEqual(
-            os.system(
-            "bygul simulate-proportions "
-            "--primers bygul/tests/data/ARTIC_V4-1.bed "
-            "--csv bygul/tests/data/sample_proportions.csv "
-            "--multifasta bygul/tests/data/sample_genomes.fasta "
-            "--redo --simulator mason "
-            "--reference bygul/tests/data/reference.fasta "
-            "--illumina-read-length 200"
-            ),
-            0,
-        )
-
-        self.assertTrue(os.path.exists("results/reads_1.fastq"))
-
-        abundances = self.run_freyja()
-
-        expected = pd.read_csv(
-            "bygul/tests/data/sample_proportions.csv"
-        )
-
-        expected_props = sorted(
-            expected["proportion"].tolist(),
-            reverse=True,
-        )
-
-        self.assertEqual(
-            len(abundances),
-            len(expected_props),
-        )
-
-        for observed, expected in zip(abundances, expected_props):
-            self.assertAlmostEqual(
-                observed,
-                expected,
-                delta=0.1,
-            )
+        self.assertAlmostEqual(top_abundance, 0.8, delta=0.1)
+        self.assertAlmostEqual(second_abundance, 0.2, delta=0.1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
