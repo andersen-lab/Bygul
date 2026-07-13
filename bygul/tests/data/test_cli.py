@@ -55,6 +55,7 @@ class CommandLineTests(unittest.TestCase):
             --genomes bygul/tests/data/ATM-2FFMD73N3.fasta \
             --primers bygul/tests/data/ARTIC_V4-1.bed -1 130 \
             -2 130 --reference bygul/tests/data/reference.fasta --redo"
+            "--reference bygul/tests/data/reference.fasta --redo"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
@@ -82,6 +83,7 @@ class CommandLineTests(unittest.TestCase):
     def test_simulation_with_metagenomics(self):
         os.system(
             "bygul simulate-proportions "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
             "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
             "bygul/tests/data/KR-SEARCH-120354.fasta "
             "--simulation_mode metagenomics "
@@ -92,9 +94,11 @@ class CommandLineTests(unittest.TestCase):
     def test_simulation_with_mason(self):
         os.system(
             "bygul simulate-proportions "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
             "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
             "bygul/tests/data/KR-SEARCH-120354.fasta "
             "--proportions 0.8,0.2 --redo --simulator mason "
+            "--reference bygul/tests/data/reference.fasta "
             "--illumina-read-length 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
@@ -102,8 +106,11 @@ class CommandLineTests(unittest.TestCase):
     def test_simulation_with_csv(self):
         os.system(
             "bygul simulate-proportions "
+            "--primers bygul/tests/data/ARTIC_V4-1.bed "
             "--csv bygul/tests/data/sample_proportions.csv "
+            "--multifasta bygul/tests/data/sample_genomes.fasta "
             "--redo --simulator mason "
+            "--reference bygul/tests/data/reference.fasta "
             "--illumina-read-length 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
