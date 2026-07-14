@@ -770,7 +770,14 @@ def process_primer_check_worker(args):
             str(genome_seq.seq),
             maxmismatch
         )
-        all_amplicons = create_valid_primer_combinations(contig_df)
+        try:
+            all_amplicons = create_valid_primer_combinations(contig_df)
+        except Exception as e:
+            print(f"\n[!] SKIPPING {genome_seq.id} "
+                  "due to an error in primer matching:")
+            print(f"    Error details: {e}\n")
+            continue
+
         all_amplicons = all_amplicons.fillna(0)
 
         all_amplicons["amplicon_length"] = np.where(
@@ -806,7 +813,6 @@ def process_amplicon_worker(args):
     (name, genome_seqs, cnt, df_primers_template, maxmismatch, outdir,
      simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
      extra_simulator_flags) = args
-
     sample_amplicons_list = []
     for genome_seq in genome_seqs:
         # Print information about the quality of the provided file
@@ -816,7 +822,18 @@ def process_amplicon_worker(args):
             str(genome_seq.seq),
             maxmismatch
         )
-        all_amplicons = create_valid_primer_combinations(contig_df)
+        try:
+            all_amplicons = create_valid_primer_combinations(contig_df)
+        except Exception as e:
+            print(f"\n[!] SKIPPING {genome_seq.id} "
+                  "due to an error in primer matching:")
+            print(f"    Error details: {e}\n")
+            continue
+
+        if all_amplicons is None or all_amplicons.empty:
+            print("Warning: No primer matches found "
+                  f"in contig {genome_seq.id}. Skipping to next contig.")
+            continue
         all_amplicons = all_amplicons.fillna(0)
 
         all_amplicons["amplicon_length"] = np.where(
@@ -838,11 +855,10 @@ def process_amplicon_worker(args):
         )
         all_amplicons["contig_id"] = genome_seq.id
         sample_amplicons_list.append(all_amplicons)
-
     if not sample_amplicons_list:
-        return ("warning",
-                f"Warning: No sequences found in {name}")
-
+        print("Failure: Absolutely no amplicons "
+              f"found across ANY contigs for {name}")
+        return ("failed", name, None, None)
     full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
     amp_out_dir = os.path.join(outdir, name, "amplicons")
     os.makedirs(amp_out_dir, exist_ok=True)
