@@ -53,7 +53,7 @@ bygul simulate-proportions --genomes [SAMPLE1.fasta,SAMPLE2.fasta] --primers [pr
     bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta -R 0.01
     ```
 * **Using a csv file and all samples in a multi-fasta file:**
-    `--csv' and `--multifasta` are always provided together, the CSV file contains two columns `sample_name` and `proportion`. Samples with multiple contigs, must have their IDs as: `sample_name|contig_name' in the multifasta file.
+    `--csv` and `--multifasta` are always provided together, the CSV file contains two columns `sample_name` and `proportion`. Samples with multiple contigs, must have their IDs as: `sample_name|contig_name` in the multifasta file.
     ```bash
     bygul simulate-proportions --csv samples.csv --multifasta samples.fasta --reference reference.fasta
     ```
