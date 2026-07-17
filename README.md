@@ -33,24 +33,29 @@ Use this mode when simulating specific genomic regions defined by a primer set.
 
 ### Basic Command
 ```bash
-bygul simulate-proportions [SAMPLE1.fasta,SAMPLE2.fasta] --primers [primer.bed] --reference [reference.fasta] --proportions [0.8,0.2] --outdir [output_dir]
+bygul simulate-proportions --genomes [SAMPLE1.fasta,SAMPLE2.fasta] --primers [primer.bed] --reference [reference.fasta] --proportions [0.8,0.2] --outdir [output_dir]
 ```
 
 ### Advanced Examples
 * **Random Proportions & Mismatches:**
     Simulate with random proportions and allow up to 2 SNPs in primer regions.
     ```bash
-    bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
+    bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
     ```
 * **Switching Simulators:**
     Use `mason` instead of the default `wgsim`.
     ```bash
-    bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --simulator mason
+    bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --simulator mason
     ```
 * **Custom Error Rates & Lengths:**
     Pass simulator-specific parameters (e.g. indel fraction `-R`) directly.
     ```bash
-    bygul simulate-proportions sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta -R 0.01
+    bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta -R 0.01
+    ```
+* **Using a csv file and all samples in a multi-fasta file:**
+    `--csv' and `--multifasta` are always provided together, the CSV file contains two columns `sample_name` and `proportion`. Samples with multiple contigs, must have their IDs as: `sample_name|contig_name' in the multifasta file.
+    ```bash
+    bygul simulate-proportions --csv samples.csv --multifasta samples.fasta --reference reference.fasta
     ```
 ---
 
@@ -59,12 +64,12 @@ Simulate reads from entire samples without requiring a primer BED file or a refe
 
 ### Basic Metagenomics Simulation
 ```bash
-bygul simulate-proportions sample1.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
+bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
 ```
 
 ### Metagenomics with Specific Parameters
 ```bash
-bygul simulate-proportions sample1.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
+bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
 ```
 
 ---
@@ -98,26 +103,26 @@ bygul check-primers sequences.fasta primer.bed reference.fasta
 
 Example simualtion command
  ```
-bygul simulate-proportions [SAMPLE1.fasta,SAMPLE2.fasta,..] --primers [primer.bed] --reference [reference.fasta] --proportions [0.8,0.2,..] --outdir [output_directory]
+bygul simulate-proportions --genomes [SAMPLE1.fasta,SAMPLE2.fasta,..] --primers [primer.bed] --reference [reference.fasta] --proportions [0.8,0.2,..] --outdir [output_directory]
  ```
 
 Simulate reads from different samples without defining proportions (will be assigned randomly, proportions can be found in `results/sample_proportions.txt`) and allowing upto 2 SNPs mistmatches in the primer regions.
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
+bygul simulate-proportions --genomes sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
  ```
 Simulate reads with user-defined proportions and specifing read simulator.
 bygul uses wgsim as a simulator but you can change it to mason.
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --simulator mason
+bygul simulate-proportions --genomes sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --simulator mason
  ```
 Simulate reads with user-defined proportions and number of reads per amplicon.
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --readcnt 1000
+bygul simulate-proportions --genomes sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --readcnt 1000
  ```
 
 Simulate reads with additional parameters such as base error rate, read length and indels fraction
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --readcnt 1000 -e 0.001 -1 400 -2 400 -R 0.01
+bygul simulate-proportions --genomes sample.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --proportions 0.2,0.8 --readcnt 1000 -e 0.001 -1 400 -2 400 -R 0.01
  ```
 ## Notes
 #### Number of reads per amplicon
@@ -139,10 +144,10 @@ Users can now simulate reads from different samples in a metagenomics setting wi
 
 Simulate reads from different samples without defining proportions (will be assigned randomly, proportions can be found in `results/sample_proportions.txt`).
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
+bygul simulate-proportions --genomes sample.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
  ```
 
 Specify proportions for each sample and add other simulator specific parameters. To access simulator parameters, please read wgsim and mason documentation.
  ```
-bygul simulate-proportions sample.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
+bygul simulate-proportions --genomes sample.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
  ```
