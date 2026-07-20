@@ -927,7 +927,7 @@ def process_genome_worker(args):
     )
     # Expected paths for merging step in main thread
     read_path1 = os.path.join(os.path.abspath(outdir),
-                            name, "reads/reads_1.fastq")
+                              name, "reads/reads_1.fastq")
     read_path2 = os.path.join(os.path.abspath(outdir),
-                            name, "reads/reads_2.fastq")
+                              name, "reads/reads_2.fastq")
     return ("success", name, read_path1, read_path2)
