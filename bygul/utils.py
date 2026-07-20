@@ -500,6 +500,9 @@ def run_simulation_on_fasta_single_genome(
     output_dir,
     read_cnt,
     simulator,
+    wgsim_insert_size,
+    wgsim_read_length,
+    wgsim_error_rate,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -510,12 +513,19 @@ def run_simulation_on_fasta_single_genome(
     output2 = os.path.join(
             output_dir, "reads_2.fastq"
     )
-
     if simulator == "wgsim":
         command = [
             "wgsim",
             "-N",
             str(read_cnt),
+            "-d",
+            str(wgsim_insert_size),
+            "-e",
+            str(wgsim_error_rate),
+            "-1",
+            str(wgsim_read_length),
+            "-2",
+            str(wgsim_read_length),
             fasta_file,
             output1,
             output2,
@@ -899,21 +909,22 @@ def process_amplicon_worker(args):
 
 def process_genome_worker(args):
     """Worker for the default/standard genome simulation mode (else clause)."""
-    name, path, cnt, outdir, simulator, extra_simulator_flags = args
+    (name, sample_path, cnt, outdir,
+     simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+     extra_simulator_flags) = args
     read_dir = os.path.join(outdir, name, "reads")
     os.makedirs(read_dir, exist_ok=True)
-
     run_simulation_on_fasta_single_genome(
-        path,
+        sample_path,
         read_dir,
         cnt,
         simulator,
+        wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
         extra_flags=extra_simulator_flags
     )
-
     # Expected paths for merging step in main thread
     read_path1 = os.path.join(os.path.abspath(outdir),
-                              name, "reads/reads_1.fastq")
+                            name, "reads/reads_1.fastq")
     read_path2 = os.path.join(os.path.abspath(outdir),
-                              name, "reads/reads_2.fastq")
+                            name, "reads/reads_2.fastq")
     return ("success", name, read_path1, read_path2)
