@@ -870,18 +870,21 @@ def process_amplicon_worker(args):
               f"found across ANY contigs for {name}")
         return ("failed", name, None, None)
     full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
+
     amp_out_dir = os.path.join(outdir, name, "amplicons")
     os.makedirs(amp_out_dir, exist_ok=True)
-    full_sample_df.to_csv(os.path.join(amp_out_dir,
-                                       "amplicon_stats.csv"),
-                          index=False)
-
     full_sample_df["amplicon_suffix"] = full_sample_df[
         "amplicon_number"].apply(
         lambda x: x.split("_")[0] if "_" in x else x
     )
     for n, g in full_sample_df.groupby("amplicon_suffix"):
         write_fasta_group(g, n, amp_out_dir)
+    # no need to return amplicon sequence
+    full_sample_df = full_sample_df.drop(columns=['amplicon_sequence',
+                                                  'amplicon_suffix'])
+    full_sample_df.to_csv(os.path.join(amp_out_dir,
+                                       "amplicon_stats.csv"),
+                          index=False)
 
     read_dir = os.path.join(outdir, name, "reads")
     os.makedirs(read_dir, exist_ok=True)
