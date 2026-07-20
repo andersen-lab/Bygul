@@ -114,6 +114,16 @@ class CommandLineTests(unittest.TestCase):
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
+    def test_simulation_with_csv_metagenomics(self):
+        os.system(
+            "bygul simulate-proportions "
+            "--csv bygul/tests/data/sample_proportions.csv "
+            "--multifasta bygul/tests/data/sample_genomes.fasta "
+            "--redo --simulation_mode metagenomics "
+            "--illumina-read-length 200"
+        )
+        self.assertTrue(file_exists(".", "results/reads_1.fastq"))
+
     def test_check_primers(self):
         os.system(
             "bygul check-primers "
