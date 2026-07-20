@@ -55,6 +55,18 @@ class ProportionTests(unittest.TestCase):
         self.assertTrue(os.path.exists("results/reads_1.fastq"))
         self._run_freyja_and_check([0.8, 0.2])
 
+    def test_prop_with_metagenomics(self):
+        os.system(
+            "bygul simulate-proportions "
+            "--genomes bygul/tests/data/BCN-SEARCH-105346.fasta,"
+            "bygul/tests/data/CA-SEARCH-43254.fasta "
+            "--simulation_mode metagenomics "
+            "--proportions 0.8,0.2 --redo"
+        )
+
+        self.assertTrue(os.path.exists("results/reads_1.fastq"))
+        self._run_freyja_and_check([0.8, 0.2])
+
     def test_simulation_with_csv(self):
         os.system(
             "bygul simulate-proportions "
