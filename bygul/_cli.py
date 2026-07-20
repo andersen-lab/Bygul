@@ -207,7 +207,10 @@ def simulate_proportions(
     else:
         # Setup for standard/else clause simulation mapping
         task_args = [
-            (name, path, cnt, outdir, simulator, extra_simulator_flags)
+            (name, path, cnt, outdir, simulator,
+             wgsim_insert_size,
+             wgsim_read_length, wgsim_error_rate,
+             extra_simulator_flags)
             for name, path, cnt in zip(sample_names, sample_paths, read_cnts)
         ]
         worker_func = process_genome_worker
