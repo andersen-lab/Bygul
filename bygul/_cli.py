@@ -99,13 +99,11 @@ def cli():
 )
 @click.option(
     "--wgsim_read_length", default=150,
-    help="Read length for simulation using wgsim in amplicon"
-    "simulation mode."
+    help="Read length for simulation using wgsim."
 )
 @click.option(
     "--wgsim_error_rate", default=0.0001,
-    help="Error rate for simulation using wgsim in amplicon"
-    "simulation mode."
+    help="Error rate for simulation using wgsim"
 )
 @click.option("--readcnt", default=500, help="Number of reads per amplicon")
 @click.option(
