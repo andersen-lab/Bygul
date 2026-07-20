@@ -70,6 +70,10 @@ bygul simulate-proportions sample1.fasta,sample2.fasta --outdir results/ --simul
 ```bash
 bygul simulate-proportions sample1.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
 ```
+### Metagenomics with csv and multifasta
+```bash
+bygul simulate-proportions --csv samples.csv --multifasta samples.fasta --outdir results/ --simulation_mode metagenomics
+```
 
 ---
 ## 📝 Technical Notes
