@@ -139,30 +139,38 @@ def simulate_proportions(
         process_amplicon_worker,
         process_genome_worker
     )
-    # validare simulation arugments
-    validate_simulation_args(simulation_mode, primers,
-                             reference, proportions,
-                             csv, genomes, multifasta)
+    # Validate simulation arguments
+    validate_simulation_args(
+        simulation_mode, primers, reference,
+        proportions, csv, genomes, multifasta
+    )
+
     if reference != "NA":
-        # read the reference sequence
+        # Read the reference sequence
         reference = next(SeqIO.parse(reference, "fasta"))
-    # needed to pass simulation specific flags
+
+    # Capture extra flags passed to click context
     extra_simulator_flags = ctx.args
     ctx = click.get_current_context()
+
     genome_map = defaultdict(list)
+    genome_map_paths = {}
+
     if csv != "NA" and multifasta != "NA":
         df = pd.read_csv(csv)
         sample_names = df["sample_name"].tolist()
         proportions = df["proportion"].tolist()
+
         for record in SeqIO.parse(multifasta, "fasta"):
             sample = record.id.split("|")[0]
             genome_map[sample].append(record)
+
         # Ensure every sample in the CSV exists
         missing = set(sample_names) - set(genome_map)
         if missing:
             raise click.ClickException(
-                "Samples missing from multifasta:"
-                f" {', '.join(sorted(missing))}"
+                "Samples missing from multifasta: "
+                f"{', '.join(sorted(missing))}"
             )
     else:
         sample_paths = str(genomes).split(",")
@@ -170,16 +178,18 @@ def simulate_proportions(
             for record in SeqIO.parse(path, "fasta"):
                 sample = record.id.split("|")[0]
                 genome_map[sample].append(record)
+                genome_map_paths[sample] = path
         sample_names = list(genome_map.keys())
-    # check directory exists- if redo specified make again
+
+    # Check directory exists - if redo specified, make again
     check_dir(outdir, redo, sample_names)
-    # process the proportions and give warnings if necessary
-    # assign proportions randomly if not provided
+
+    # Process proportions and assign randomly if not provided
     proportions = process_sample_proportions(proportions,
                                              sample_names,
-                                             outdir,
-                                             csv)
-    # read counts defined pased on proportions
+                                             outdir, csv)
+
+    # Calculate read counts per sample based on proportions
     rc = int(readcnt)
     read_cnts = np.random.multinomial(rc, proportions)
 
@@ -192,26 +202,57 @@ def simulate_proportions(
         df_primers_template = preprocess_primers(primers, reference)
 
         task_args = [
-            (name, genome_map[name], cnt,
-             df_primers_template, maxmismatch, outdir,
-             simulator, wgsim_insert_size,
-             wgsim_read_length, wgsim_error_rate,
-             extra_simulator_flags)
+            (
+                name,
+                genome_map[name],
+                cnt,
+                df_primers_template,
+                maxmismatch,
+                outdir,
+                simulator,
+                wgsim_insert_size,
+                wgsim_read_length,
+                wgsim_error_rate,
+                extra_simulator_flags,
+            )
             for name, cnt in zip(sample_names, read_cnts)
         ]
 
         worker_func = process_amplicon_worker
 
     else:
-        # Setup for standard/else clause simulation mapping
-        task_args = [
-            (name, path, cnt, outdir, simulator,
-             wgsim_insert_size,
-             wgsim_read_length, wgsim_error_rate,
-             extra_simulator_flags)
-            for name, path, cnt in zip(sample_names, sample_paths, read_cnts)
-        ]
+        # Metagenomics / standard genome mode
+        task_args = []
+        for name, cnt in zip(sample_names, read_cnts):
+            sample_out_dir = os.path.join(outdir, name)
+            os.makedirs(sample_out_dir, exist_ok=True)
+
+            # Handle FASTA path resolution
+            if csv != "NA" and multifasta != "NA":
+                # Extract SeqRecords for this sample
+                # and save to a local .fasta file
+                sample_fasta = os.path.join(sample_out_dir,
+                                            f"{name}.fasta")
+                records = genome_map[name]
+                SeqIO.write(records, sample_fasta, "fasta")
+            else:
+                # Retrieve existing file path saved earlier
+                sample_fasta = genome_map_paths[name]
+
+            task_args.append((
+                name,
+                sample_fasta,
+                cnt,
+                outdir,
+                simulator,
+                wgsim_insert_size,
+                wgsim_read_length,
+                wgsim_error_rate,
+                extra_simulator_flags,
+            ))
+
         worker_func = process_genome_worker
+
     # Run Parallel Pool Execution
     print(f"Spinning up parallel execution for {len(sample_names)} samples...")
     with ProcessPoolExecutor() as executor:
