@@ -7,3 +7,4 @@ wgsim
 pytest
 minimap2
 freyja
+mason

@@ -16,30 +16,43 @@ import shutil
 def process_sample_proportions(
     proportions,
     sample_names,
-    sample_paths,
-    outdir
+    outdir,
+    csv,
 ):
     """
-    Processes sample proportions for read simulation.
+    Process sample proportions for read simulation.
 
-    Parameters:
-        proportions (str or list): Either "NA" or comma-separated proportions.
-        sample_names (list): List of sample names.
-        sample_paths (list): List of sample file paths.
-        outdir (str): Output directory.
+    Parameters
+    ----------
+    proportions : str | list
+        Either:
+        - "NA" to generate/default proportions,
+        - a comma-separated string of proportions,
+        - or a list of proportions (from a CSV).
+    sample_names : list[str]
+        Names of the samples.
+    outdir : str
+        Output directory.
+    csv : str
+        Indicates whether proportions came from a CSV ("NA" if not).
 
-    Returns:
-        list: Processed proportions as floats.
+    Returns
+    -------
+    list[float]
+        Validated sample proportions.
     """
 
-    if proportions == "NA":
+    # Proportions supplied from CSV
+    if csv != "NA":
+        proportions = [float(p) for p in proportions]
+
+    # No proportions supplied
+    elif proportions == "NA":
         if len(sample_names) == 1:
             print(
-                "Only one sample provided. "
-                "Using 1.0 as the sample proportion."
+                "Only one sample provided. Using 1.0 as the sample proportion."
             )
             proportions = [1.0]
-
         else:
             print(
                 "Read simulation proportions not provided. "
@@ -48,31 +61,24 @@ def process_sample_proportions(
 
             proportions = generate_random_values(len(sample_names))
 
-            with open(
-                os.path.join(outdir, "sample_proportions.txt"),
-                "w"
-            ) as file:
+            output_file = os.path.join(outdir, "sample_proportions.txt")
+            with open(output_file, "w") as f:
                 for name, proportion in zip(sample_names, proportions):
-                    file.write(f"{name}: {proportion}\n")
+                    f.write(f"{name}: {proportion}\n")
 
+    # Comma-separated proportions from CLI
     else:
-        proportions = list(map(float, str(proportions).split(",")))
+        proportions = [float(p) for p in proportions.split(",")]
 
-    # Validate lengths
-    if not (
-        len(sample_names) ==
-        len(proportions) ==
-        len(sample_paths)
-    ):
-        raise Exception(
-            "Number of samples, proportions, and sample paths should match!"
+    if len(sample_names) != len(proportions):
+        print("sample length:", len(sample_names))
+        print("proportions length:", len(proportions))
+        raise ValueError(
+            "The number of sample names must match the number of proportions."
         )
 
-    # Validate proportions sum
-    if round(sum(proportions), 6) != 1.0:
-        raise Exception(
-            "Sum of all proportions should equal 1.0!"
-        )
+    if abs(sum(proportions) - 1.0) > 1e-6:
+        raise ValueError("Sample proportions must sum to 1.0.")
 
     return proportions
 
@@ -110,7 +116,9 @@ def check_dir(outdir, redo, sample_names):
         os.makedirs(outdir, exist_ok=True)
 
 
-def validate_simulation_args(simulation_mode, primers, reference):
+def validate_simulation_args(simulation_mode, primers, reference,
+                             proportions, proportions_csv, genomes,
+                             multifasta):
     if simulation_mode == "amplicon" and primers == "NA":
         print("Primer file is required for simulation mode amplicon")
         sys.exit(1)
@@ -123,9 +131,20 @@ def validate_simulation_args(simulation_mode, primers, reference):
     if simulation_mode == "amplicon" and reference == "NA":
         print("Reference file is required for simulation mode amplicon")
         sys.exit(1)
+    if proportions_csv != "NA":
+        if proportions != "NA":
+            print("Cannot use --proportions with --csv")
+            sys.exit(1)
+
+        if genomes != "NA":
+            print("Cannot use --genomes with --csv")
+            sys.exit(1)
+    if multifasta != "NA" and proportions_csv == "NA":
+        print("--multifasta must be used together with --csv.")
+        sys.exit(1)
 
 
-def assess_genome_quality_from_fasta(fasta_path):
+def assess_genome_quality_from_fasta(sequence):
     """
     Parses a FASTA genome file and assesses quality by:
     - Counting ambiguous (non-ACGT) bases.
@@ -134,7 +153,7 @@ def assess_genome_quality_from_fasta(fasta_path):
     - Printing a genome quality summary.
 
     Parameters:
-        fasta_path (str): Path to the FASTA file.
+        sequence (SeqRecord): The FASTA sequence record.
 
     Returns:
         dict: {
@@ -142,15 +161,12 @@ def assess_genome_quality_from_fasta(fasta_path):
             'contig_lengths': dict of {contig_id: length}
         }
     """
-
     ambiguous_bases = {'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N'}
     total_ambiguous = 0
     contig_lengths = {}
-
-    for record in SeqIO.parse(fasta_path, "fasta"):
-        seq = str(record.seq).upper()
-        contig_lengths[record.id] = len(seq)
-        total_ambiguous += sum(1 for base in seq if base in ambiguous_bases)
+    seq = str(sequence.seq).upper()
+    contig_lengths[sequence.id] = len(seq)
+    total_ambiguous += sum(1 for base in seq if base in ambiguous_bases)
 
     report = {
         'total_ambiguous_bases': total_ambiguous,
@@ -163,19 +179,19 @@ def assess_genome_quality_from_fasta(fasta_path):
     # Warnings
     if num_ambiguous > 0:
         warnings.warn(
-            f"{fasta_path}: Contains {num_ambiguous} ambiguous base(s). "
+            f"{sequence.id}: Contains {num_ambiguous} ambiguous base(s). "
             "Please choose a better quality genome."
         )
 
     if num_contigs > 1:
         warnings.warn(
-            f"{fasta_path}: Contains {num_contigs} contigs. "
+            f"{sequence.id}: Contains {num_contigs} contigs. "
             "Does your organism have more than one chromosome? "
             "Are you providing high quality assemblies?"
         )
 
     # Print results
-    print(f"\nGenome: {fasta_path}")
+    print(f"\nGenome: {sequence.id}")
     print(f"  Total ambiguous bases: {num_ambiguous}")
     print("  Contig lengths:")
 
@@ -187,7 +203,6 @@ def assess_genome_quality_from_fasta(fasta_path):
 
 def extract_sequence(reference, chrom, start, end):
     """Extracts sequence from reference based on coordinates and strand."""
-    reference = next(SeqIO.parse(reference, "fasta"))
     if reference.id not in chrom:
         raise ValueError(f"Chromosome {chrom} not found in reference.")
     seq = reference.seq[start:end]  # Extract sequence
@@ -278,59 +293,47 @@ def merge_fastq_files(fastq_file, output_file):
     fastq_file (str): Path to the input FASTQ file.
     output_file (str): Path to the output FASTQ file.
     """
-    command = f'cat "{fastq_file}" >> "{output_file}"'
-    subprocess.call(command, shell=True)
+    with open(fastq_file, "rb") as src, open(output_file, "ab") as dst:
+        shutil.copyfileobj(src, dst)
 
 
 def create_valid_primer_combinations(df):
-    # Ensure the column exists before assignment
-    if "valid_combinations" not in df.columns:
-        df["valid_combinations"] = None
+    valid_primers = []
 
-    valid_primers = []  # Use a list instead of concatenating DataFrames
+    for row in df.itertuples(index=False):
+        combinations = evaluate_matches(
+            zip(row.left_primer_loc, row.left_match),
+            zip(row.right_primer_loc, row.right_match),
+        )
 
-    for i in range(len(df)):
-        # Pair coordinates with their mismatch maps
-        left_coords = zip(df.at[i, "left_primer_loc"],
-                          df.at[i, "left_match"])
-        right_coords = zip(df.at[i, "right_primer_loc"],
-                           df.at[i, "right_match"])
-        # Safe assignment using .at[]
-        df.at[i, "valid_combinations"] = evaluate_matches(left_coords,
-                                                          right_coords)
-        for (
-            primer_start,
-            primer_end,
-            left_match,
-            right_match
-        ) in df.at[i, "valid_combinations"]:
-            valid_primers.append(
-                {
-                    "amplicon_number": df.at[i, "amplicon_number"],
-                    "primer_start": primer_start,
-                    "primer_end": primer_end,
-                    "left_match": left_match,
-                    "right_match": right_match
-                }
-            )
+        valid_primers.extend(
+            {
+                "amplicon_number": row.amplicon_number,
+                "primer_start": primer_start,
+                "primer_end": primer_end,
+                "left_match": left_match,
+                "right_match": right_match,
+            }
+            for primer_start, primer_end,
+            left_match, right_match in combinations
+        )
 
-    # Check if we found any valid primers
     if not valid_primers:
         raise ValueError(
-            "No primer matches found, please check your primer file.")
+            "No primer matches found, please check your primer file."
+        )
 
-    # Convert collected data to DataFrame efficiently
-    valid_primers_df = pd.DataFrame.from_records(valid_primers)
-    # Merge with original DataFrame to include additional columns
-    df = df[["amplicon_number", "primer_seq_x",
-             "primer_seq_y", "ambiguous_bases"]]
-    all_amplicons = df.merge(
-        valid_primers_df,
-        how="left",
-        on="amplicon_number",
+    return (
+        df[[
+            "amplicon_number",
+            "primer_seq_x",
+            "primer_seq_y",
+            "ambiguous_bases",
+        ]]
+        .merge(pd.DataFrame(valid_primers),
+               on="amplicon_number",
+               how="left")
     )
-
-    return all_amplicons
 
 
 def preprocess_primers(primer_file, reference):
@@ -365,21 +368,17 @@ def preprocess_primers(primer_file, reference):
             "This is not recommended.",
             UserWarning,
         )
-        primer_bed["primer_seq"] = primer_bed.apply(
-            lambda row: extract_sequence(
-                reference,
-                row["ref"],
-                row["start"],
-                row["end"],
-            ),
-            axis=1,
-        )
+        primer_bed["primer_seq"] = [
+            extract_sequence(reference, row.ref, row.start, row.end)
+            for row in primer_bed.itertuples(index=False)
+            ]
     else:
         neg_strand = primer_bed["strand"] == "-"
-        primer_bed.loc[neg_strand, "primer_seq"] = (
-            primer_bed.loc[neg_strand, "primer_seq"]
-            .apply(lambda seq: str(Seq(seq).reverse_complement()))
-            )
+        _rc = str.maketrans("ACGTacgt", "TGCAtgca")
+        primer_bed.loc[neg_strand, "primer_seq"] = [
+            seq.translate(_rc)[::-1]
+            for seq in primer_bed.loc[neg_strand, "primer_seq"]
+            ]
     # split the amplicon name into number and left/right
     primer_bed["amplicon_number"] = primer_bed["left_right"].str.split(
         "_").str[1]
@@ -492,9 +491,8 @@ def run_simulation_on_fasta(
         except subprocess.CalledProcessError as e:
             print(f"An error occurred while running the command: {e}")
         # Merge the contig-specific output into the final merged output files
-        command_merge = f'cat "{output1}" >> "{merged_output1}" \
-            && cat "{output2}" >> "{merged_output2}"'
-        subprocess.call(command_merge, shell=True)
+        merge_fastq_files(output1, merged_output1)
+        merge_fastq_files(output2, merged_output2)
 
 
 def run_simulation_on_fasta_single_genome(
@@ -502,6 +500,9 @@ def run_simulation_on_fasta_single_genome(
     output_dir,
     read_cnt,
     simulator,
+    wgsim_insert_size,
+    wgsim_read_length,
+    wgsim_error_rate,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -512,12 +513,19 @@ def run_simulation_on_fasta_single_genome(
     output2 = os.path.join(
             output_dir, "reads_2.fastq"
     )
-
     if simulator == "wgsim":
         command = [
             "wgsim",
             "-N",
             str(read_cnt),
+            "-d",
+            str(wgsim_insert_size),
+            "-e",
+            str(wgsim_error_rate),
+            "-1",
+            str(wgsim_read_length),
+            "-2",
+            str(wgsim_read_length),
             fasta_file,
             output1,
             output2,
@@ -547,6 +555,23 @@ def run_simulation_on_fasta_single_genome(
         print(f"An error occurred while running the command: {e}")
 
 
+# Extended ambiguity-aware mismatch display
+def mismatch_alignment(primer, matched_seq):
+    """
+    Returns matched sequence with mismatches shown in parentheses.
+    Also returns a flag if primer contains any ambiguous base.
+    """
+    ambiguous_bases = {'R', 'Y', 'S', 'W',
+                       'K', 'M', 'B', 'D',
+                       'H', 'V', 'N'}
+    has_ambiguity = any(base in ambiguous_bases
+                        for base in matched_seq.upper())
+    aligned = []
+    for p, m in zip(primer.upper(), matched_seq.upper()):
+        aligned.append(m if p == m else f"({m})")
+    return "".join(aligned), has_ambiguity
+
+
 def find_closest_primer_match(df, reference_seq, maxmismatch):
     """
     For each row in df, find all left/right primer match positions (as lists),
@@ -554,47 +579,38 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
     on the same strand. Returns original df columns + matches, mismatch maps,
     strand, and whether primers contain ambiguous bases (IUPAC codes).
     """
-
-    # Extended ambiguity-aware mismatch display
-    def mismatch_alignment(primer, matched_seq):
-        """
-        Returns matched sequence with mismatches shown in parentheses.
-        Also returns a flag if primer contains any ambiguous base.
-        """
-        ambiguous_bases = {'R', 'Y', 'S', 'W',
-                           'K', 'M', 'B', 'D',
-                           'H', 'V', 'N'}
-        has_ambiguity = any(base in ambiguous_bases
-                            for base in matched_seq.upper())
-        aligned = []
-        for p, m in zip(primer.upper(), matched_seq.upper()):
-            aligned.append(m if p == m else f"({m})")
-        return "".join(aligned), has_ambiguity
-
     results = []
     warned = False
-
-    for _, row in df.iterrows():
-        primer_left = row["primer_seq_x"]
-        primer_right = row["primer_seq_y"]
+    for row in df.itertuples(index=False):
+        primer_left = row.primer_seq_x
+        primer_right = row.primer_seq_y
 
         pattern_left = f"({primer_left}){{s<={maxmismatch}}}"
         pattern_right = f"({primer_right}){{s<={maxmismatch}}}"
 
-        # Forward strand search
-        left_fwd = [m.start() for m in re.finditer(pattern_left,
-                                                   reference_seq,
-                                                   flags=re.IGNORECASE,
-                                                   overlapped=True)]
-        right_fwd = [m.start() for m in re.finditer(pattern_right,
-                                                    reference_seq,
-                                                    flags=re.IGNORECASE,
-                                                    overlapped=True)]
+        # --- 1. INITIALIZE REVERSE VARIABLES UP FRONT ---
+        left_rev, right_rev = [], []
+        left_rev_actual, right_rev_actual = [], []
+        left_rev_mismatch_map, right_rev_mismatch_map = [], []
+        left_rev_has_ambig, right_rev_has_ambig = [], []
 
-        left_fwd_actual = [reference_seq[pos:pos+len(primer_left)]
-                           for pos in left_fwd]
-        right_fwd_actual = [reference_seq[pos:pos+len(primer_right)]
-                            for pos in right_fwd]
+        # --- 2. FORWARD STRAND SEARCH ---
+        left_fwd_data = [
+            (m.start(), m.group())
+            for m in re.finditer(pattern_left, reference_seq,
+                                 flags=re.IGNORECASE, overlapped=True)
+        ]
+        right_fwd_data = [
+            (m.start(), m.group())
+            for m in re.finditer(pattern_right, reference_seq,
+                                 flags=re.IGNORECASE, overlapped=True)
+        ]
+        left_fwd = [pos for pos, _ in left_fwd_data]
+        right_fwd = [pos for pos, _ in right_fwd_data]
+
+        left_fwd_actual = [seq for _, seq in left_fwd_data]
+        right_fwd_actual = [seq for _, seq in right_fwd_data]
+
         left_fwd_mismatch_map = []
         left_fwd_has_ambig = []
         for seq in left_fwd_actual:
@@ -607,55 +623,56 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             aligned, has_ambig = mismatch_alignment(primer_right, seq)
             right_fwd_mismatch_map.append(aligned)
             right_fwd_has_ambig.append(has_ambig)
-        # Reverse strand search
-        # get complimentary reverse of primers
-        # right and left primer change direction
-        right_rev = str(Seq(primer_left).reverse_complement())
-        left_rev = str(Seq(primer_right).reverse_complement())
-        pattern_left_rev = f"({left_rev}){{s<={maxmismatch}}}"
-        pattern_right_rev = f"({right_rev}){{s<={maxmismatch}}}"
-        # Forward strand search
-        left_rev_pos = [m.start() for m in re.finditer(pattern_left_rev,
-                                                       reference_seq,
-                                                       flags=re.IGNORECASE,
-                                                       overlapped=True)]
-        right_rev_pos = [m.start() for m in re.finditer(pattern_right_rev,
-                                                        reference_seq,
-                                                        flags=re.IGNORECASE,
-                                                        overlapped=True)]
-        left_rev_actual = [reference_seq[pos:pos+len(left_rev)]
-                           for pos in left_rev_pos]
-        right_rev_actual = [reference_seq[pos:pos+len(right_rev)]
-                            for pos in right_rev_pos]
-        left_rev_mismatch_map = []
-        left_rev_has_ambig = []
-        for seq in left_rev_actual:
-            aligned, has_ambig = mismatch_alignment(left_rev, seq)
-            left_rev_mismatch_map.append(aligned)
-            left_rev_has_ambig.append(has_ambig)
-        right_rev_mismatch_map = []
-        right_rev_has_ambig = []
-        for seq in right_rev_actual:
-            aligned, has_ambig = mismatch_alignment(right_rev, seq)
-            right_rev_mismatch_map.append(aligned)
-            right_rev_has_ambig.append(has_ambig)
 
-        # Check if any ambiguous bases are in the primers or alignments
+        # --- 3. REVERSE STRAND SEARCH (IF FORWARD FAILS) ---
+        if not left_fwd or not right_fwd:
+            complement_table = str.maketrans("ATCGatcg", "TAGCtagc")
+            # Reverse complement without Bio Python
+            right_rev_seq = primer_left.translate(complement_table)[::-1]
+            left_rev_seq = primer_right.translate(complement_table)[::-1]
+            pattern_left_rev = f"({left_rev_seq}){{s<={maxmismatch}}}"
+            pattern_right_rev = f"({right_rev_seq}){{s<={maxmismatch}}}"
+            left_rev_data = [
+                (m.start(), m.group())
+                for m in re.finditer(pattern_left_rev, reference_seq,
+                                     flags=re.IGNORECASE, overlapped=True)
+            ]
+            right_rev_data = [
+                (m.start(), m.group())
+                for m in re.finditer(pattern_right_rev, reference_seq,
+                                     flags=re.IGNORECASE, overlapped=True)
+            ]
+            left_rev = [pos for pos, _ in left_rev_data]
+            right_rev = [pos for pos, _ in right_rev_data]
+
+            left_rev_actual = [seq for _, seq in left_rev_data]
+            right_rev_actual = [seq for _, seq in right_rev_data]
+            for seq in left_rev_actual:
+                aligned, has_ambig = mismatch_alignment(left_rev_seq, seq)
+                left_rev_mismatch_map.append(aligned)
+                left_rev_has_ambig.append(has_ambig)
+            for seq in right_rev_actual:
+                aligned, has_ambig = mismatch_alignment(right_rev_seq, seq)
+                right_rev_mismatch_map.append(aligned)
+                right_rev_has_ambig.append(has_ambig)
+
+        # --- 4. AMBIGUOUS BASE CHECK ---
         has_ambiguous_base = any([
             any(b in primer_left.upper() for b in "RYSWKMBDHVN"),
             any(b in primer_right.upper() for b in "RYSWKMBDHVN"),
-            any(left_fwd_has_ambig) if left_fwd_has_ambig else False,
-            any(right_fwd_has_ambig) if right_fwd_has_ambig else False,
-            any(left_rev_has_ambig) if left_rev_has_ambig else False,
-            any(right_rev_has_ambig) if right_rev_has_ambig else False,
+            any(left_fwd_has_ambig),
+            any(right_fwd_has_ambig),
+            any(left_rev_has_ambig),
+            any(right_rev_has_ambig),
         ])
         if has_ambiguous_base and not warned:
-            warnings.warn("One or more primers contain ambiguous"
-                          "bases (e.g., N, R, Y, etc)."
+            warnings.warn("One or more primers contain ambiguous "
+                          "bases (e.g., N, R, Y, etc). "
                           "Matches may be unreliable.")
             warned = True
 
-        result_row = row.to_dict()
+        # --- 5. BUILD RESULT DICTIONARY ---
+        result_row = row._asdict()
         result_row["ambiguous_bases"] = has_ambiguous_base
 
         if left_fwd and right_fwd:
@@ -667,10 +684,10 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
                 "left_match": left_fwd_mismatch_map,
                 "right_match": right_fwd_mismatch_map,
             })
-        elif left_rev_pos and right_rev_pos:
+        elif left_rev and right_rev:  # Fixed variable naming conflict here
             result_row.update({
-                "left_primer_loc": left_rev_pos,
-                "right_primer_loc": right_rev_pos,
+                "left_primer_loc": left_rev,
+                "right_primer_loc": right_rev,
                 "left_seq_actual": left_rev_actual,
                 "right_seq_actual": right_rev_actual,
                 "left_match": left_rev_mismatch_map,
@@ -687,7 +704,6 @@ def find_closest_primer_match(df, reference_seq, maxmismatch):
             })
 
         results.append(result_row)
-
     return pd.DataFrame(results)
 
 
@@ -749,3 +765,169 @@ def write_fasta_group(group, amplicon_number, output_dir):
             "no file written.please checkout the amplicon_stats.csv "
             "file for more information."
         )
+
+
+def process_primer_check_worker(args):
+    (name, genome_seqs, df_primers_template,
+     maxmismatch, outdir) = args
+
+    sample_amplicons_list = []
+    for genome_seq in genome_seqs:
+        # Print information about the quality of the provided file
+        assess_genome_quality_from_fasta(genome_seq)
+        contig_df = find_closest_primer_match(
+            df_primers_template.copy(),
+            str(genome_seq.seq),
+            maxmismatch
+        )
+        try:
+            all_amplicons = create_valid_primer_combinations(contig_df)
+        except Exception as e:
+            print(f"\n[!] SKIPPING {genome_seq.id} "
+                  "due to an error in primer matching:")
+            print(f"    Error details: {e}\n")
+            continue
+
+        all_amplicons = all_amplicons.fillna(0)
+
+        all_amplicons["amplicon_length"] = np.where(
+            (all_amplicons["primer_start"] != 0) &
+            (all_amplicons["primer_end"] != 0),
+            all_amplicons["primer_end"] -
+            all_amplicons["primer_start"] +
+            all_amplicons["primer_seq_y"].str.len(),
+            0,
+        )
+
+        all_amplicons["amplicon_sequence"] = all_amplicons.apply(
+            lambda row: make_amplicon(
+                row["primer_start"],
+                row["primer_end"],
+                row["primer_seq_y"],
+                genome_seq.seq,
+            ), axis=1,
+        )
+        all_amplicons["contig_id"] = genome_seq.id
+        sample_amplicons_list.append(all_amplicons)
+
+    if not sample_amplicons_list:
+        return ("warning",
+                f"Warning: No sequences found in {name}")
+
+    full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
+    return ("success", full_sample_df)
+
+
+def process_amplicon_worker(args):
+    """Worker for the 'amplicon' simulation mode."""
+    (name, genome_seqs, cnt, df_primers_template, maxmismatch, outdir,
+     simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+     extra_simulator_flags) = args
+    sample_amplicons_list = []
+    for genome_seq in genome_seqs:
+        # Print information about the quality of the provided file
+        assess_genome_quality_from_fasta(genome_seq)
+        contig_df = find_closest_primer_match(
+            df_primers_template.copy(),
+            str(genome_seq.seq),
+            maxmismatch
+        )
+        try:
+            all_amplicons = create_valid_primer_combinations(contig_df)
+        except Exception as e:
+            print(f"\n[!] SKIPPING {genome_seq.id} "
+                  "due to an error in primer matching:")
+            print(f"    Error details: {e}\n")
+            continue
+
+        if all_amplicons is None or all_amplicons.empty:
+            print("Warning: No primer matches found "
+                  f"in contig {genome_seq.id}. Skipping to next contig.")
+            continue
+        all_amplicons = all_amplicons.fillna(0)
+
+        all_amplicons["amplicon_length"] = np.where(
+            (all_amplicons["primer_start"] != 0) &
+            (all_amplicons["primer_end"] != 0),
+            all_amplicons["primer_end"] -
+            all_amplicons["primer_start"] +
+            all_amplicons["primer_seq_y"].str.len(),
+            0,
+        )
+
+        all_amplicons["amplicon_sequence"] = all_amplicons.apply(
+            lambda row: make_amplicon(
+                row["primer_start"],
+                row["primer_end"],
+                row["primer_seq_y"],
+                genome_seq.seq,
+            ), axis=1,
+        )
+        all_amplicons["contig_id"] = genome_seq.id
+        sample_amplicons_list.append(all_amplicons)
+    if not sample_amplicons_list:
+        print("Failure: Absolutely no amplicons "
+              f"found across ANY contigs for {name}")
+        return ("failed", name, None, None)
+    full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
+
+    amp_out_dir = os.path.join(outdir, name, "amplicons")
+    os.makedirs(amp_out_dir, exist_ok=True)
+    full_sample_df["amplicon_suffix"] = full_sample_df[
+        "amplicon_number"].apply(
+        lambda x: x.split("_")[0] if "_" in x else x
+    )
+    for n, g in full_sample_df.groupby("amplicon_suffix"):
+        write_fasta_group(g, n, amp_out_dir)
+    # no need to return amplicon sequence
+    full_sample_df = full_sample_df.drop(columns=['amplicon_sequence',
+                                                  'amplicon_suffix'])
+    full_sample_df.to_csv(os.path.join(amp_out_dir,
+                                       "amplicon_stats.csv"),
+                          index=False)
+
+    read_dir = os.path.join(outdir, name, "reads")
+    os.makedirs(read_dir, exist_ok=True)
+
+    fasta_files = [
+        os.path.join(amp_out_dir, f)
+        for f in os.listdir(amp_out_dir)
+        if f.endswith((".fasta", ".fa"))
+    ]
+
+    for fasta_file in fasta_files:
+        run_simulation_on_fasta(
+            fasta_file, read_dir, cnt, simulator,
+            wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+            extra_flags=extra_simulator_flags
+        )
+
+    # Expected paths for merging step in main thread
+    read_path1 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/merged_reads_1.fastq")
+    read_path2 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/merged_reads_2.fastq")
+    return ("success", name, read_path1, read_path2)
+
+
+def process_genome_worker(args):
+    """Worker for the default/standard genome simulation mode (else clause)."""
+    (name, sample_path, cnt, outdir,
+     simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+     extra_simulator_flags) = args
+    read_dir = os.path.join(outdir, name, "reads")
+    os.makedirs(read_dir, exist_ok=True)
+    run_simulation_on_fasta_single_genome(
+        sample_path,
+        read_dir,
+        cnt,
+        simulator,
+        wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+        extra_flags=extra_simulator_flags
+    )
+    # Expected paths for merging step in main thread
+    read_path1 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/reads_1.fastq")
+    read_path2 = os.path.join(os.path.abspath(outdir),
+                              name, "reads/reads_2.fastq")
+    return ("success", name, read_path1, read_path2)

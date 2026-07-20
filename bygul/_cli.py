@@ -4,6 +4,8 @@ import click
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from collections import defaultdict
 
 
 @click.group(context_settings={"show_default": True})
@@ -17,7 +19,10 @@ def cli():
     allow_extra_args=True,
 ))
 @click.pass_context
-@click.argument("genomes", type=str)
+@click.option("--genomes",
+              default="NA",
+              help="Comma-separated list of"
+              "genome file paths in fasta format")
 @click.option(
     "--reference",
     default="NA",
@@ -39,6 +44,27 @@ def cli():
     help=(
         "Read proportions for each sample, e.g.(0.8,0.2) must sum to 1.0. "
         "If not provided, the program will randomly assign proportions"
+    ),
+)
+@click.option(
+    "--csv",
+    default="NA",
+    type=str,
+    help=(
+        "Path to a CSV file containing sample paths "
+        "and proportions. The CSV should have two columns: "
+        "'sample_path' and 'proportion'. "
+        "Cannot be used together with --proportions --genomes"
+    ),
+)
+@click.option(
+    "--multifasta",
+    default="NA",
+    type=str,
+    help=(
+        "Path to a multifasta file containing all sample sequences"
+        "Cannot be used together with --genomes and --proportions."
+        "Must be used together with --csv"
     ),
 )
 @click.option(
@@ -73,13 +99,11 @@ def cli():
 )
 @click.option(
     "--wgsim_read_length", default=150,
-    help="Read length for simulation using wgsim in amplicon"
-    "simulation mode."
+    help="Read length for simulation using wgsim."
 )
 @click.option(
     "--wgsim_error_rate", default=0.0001,
-    help="Error rate for simulation using wgsim in amplicon"
-    "simulation mode."
+    help="Error rate for simulation using wgsim"
 )
 @click.option("--readcnt", default=500, help="Number of reads per amplicon")
 @click.option(
@@ -102,174 +126,158 @@ def simulate_proportions(
     maxmismatch,
     simulator,
     redo,
-    simulation_mode
+    simulation_mode,
+    csv,
+    multifasta
 ):
     from bygul.utils import (
         preprocess_primers,
-        create_valid_primer_combinations,
-        make_amplicon,
-        write_fasta_group,
-        run_simulation_on_fasta,
-        run_simulation_on_fasta_single_genome,
         merge_fastq_files,
-        find_closest_primer_match,
-        assess_genome_quality_from_fasta,
         validate_simulation_args,
         check_dir,
-        process_sample_proportions
+        process_sample_proportions,
+        process_amplicon_worker,
+        process_genome_worker
     )
-    # validare simulation arugments
-    validate_simulation_args(simulation_mode, primers, reference)
-    # needed to pass simulation specific flags
+    # Validate simulation arguments
+    validate_simulation_args(
+        simulation_mode, primers, reference,
+        proportions, csv, genomes, multifasta
+    )
+
+    if reference != "NA":
+        # Read the reference sequence
+        reference = next(SeqIO.parse(reference, "fasta"))
+
+    # Capture extra flags passed to click context
     extra_simulator_flags = ctx.args
     ctx = click.get_current_context()
-    # split the sample names and paths into a list
-    sample_names = [fp.split("/")[-1].split(".")[0]
-                    for fp in str(genomes).split(",")]
-    # check directory exists- if redo specified make again
+
+    genome_map = defaultdict(list)
+    genome_map_paths = {}
+
+    if csv != "NA" and multifasta != "NA":
+        df = pd.read_csv(csv)
+        sample_names = df["sample_name"].tolist()
+        proportions = df["proportion"].tolist()
+
+        for record in SeqIO.parse(multifasta, "fasta"):
+            sample = record.id.split("|")[0]
+            genome_map[sample].append(record)
+
+        # Ensure every sample in the CSV exists
+        missing = set(sample_names) - set(genome_map)
+        if missing:
+            raise click.ClickException(
+                "Samples missing from multifasta: "
+                f"{', '.join(sorted(missing))}"
+            )
+    else:
+        sample_paths = str(genomes).split(",")
+        for path in sample_paths:
+            for record in SeqIO.parse(path, "fasta"):
+                sample = record.id.split("|")[0]
+                genome_map[sample].append(record)
+                genome_map_paths[sample] = path
+        sample_names = list(genome_map.keys())
+
+    # Check directory exists - if redo specified, make again
     check_dir(outdir, redo, sample_names)
-    sample_paths = str(genomes).split(",")
-    # Print information about the quality of the provided file
-    for genome in sample_paths:
-        assess_genome_quality_from_fasta(genome)
-    # process the proportions and give warnings if necessary
-    # assign proportions randomly if not provided
+
+    # Process proportions and assign randomly if not provided
     proportions = process_sample_proportions(proportions,
                                              sample_names,
-                                             sample_names,
-                                             outdir)
-    # read counts defined pased on proportions
-    read_cnts = [i * int(readcnt) for i in proportions]
+                                             outdir, csv)
+
+    # Calculate read counts per sample based on proportions
+    rc = int(readcnt)
+    read_cnts = np.random.multinomial(rc, proportions)
+
+    # Global outputs for merging
+    output_path1 = os.path.join(os.path.abspath(outdir), "reads_1.fastq")
+    output_path2 = os.path.join(os.path.abspath(outdir), "reads_2.fastq")
+
     if simulation_mode == "amplicon":
-        df_primers_template = preprocess_primers(primers, reference)
         print("Reading and preprocessing the primer file...")
+        df_primers_template = preprocess_primers(primers, reference)
 
-        with tqdm(total=len(sample_names),
-                  desc="Simulation progress...") as pbar:
-            for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
-                print(f"Processing sample {name}...")
-                # List to store amplicon
-                # DataFrames from all contigs in this sample
-                sample_amplicons_list = []
-                # Iterate through EVERY contig/sequence in the FASTA file
-                for genome_seq in SeqIO.parse(path, "fasta"):
-                    print("  Extracting amplicons"
-                          f"from contig: {genome_seq.id}...")
-                    # Find matches on the current contig
-                    contig_df = find_closest_primer_match(
-                        df_primers_template.copy(),
-                        str(genome_seq.seq),
-                        maxmismatch)
-                    all_amplicons = create_valid_primer_combinations(contig_df)
-                    all_amplicons = all_amplicons.fillna(0)
-                    # Calculate lengths
-                    all_amplicons["amplicon_length"] = np.where(
-                        (all_amplicons["primer_start"] != 0) &
-                        (all_amplicons["primer_end"] != 0),
-                        all_amplicons["primer_end"] -
-                        all_amplicons["primer_start"] +
-                        all_amplicons["primer_seq_y"].str.len(),
-                        0,
-                    )
+        task_args = [
+            (
+                name,
+                genome_map[name],
+                cnt,
+                df_primers_template,
+                maxmismatch,
+                outdir,
+                simulator,
+                wgsim_insert_size,
+                wgsim_read_length,
+                wgsim_error_rate,
+                extra_simulator_flags,
+            )
+            for name, cnt in zip(sample_names, read_cnts)
+        ]
 
-                    # Generate sequences for this contig
-                    all_amplicons["amplicon_sequence"] = all_amplicons.apply(
-                        lambda row: make_amplicon(
-                            row["primer_start"],
-                            row["primer_end"],
-                            row["primer_seq_y"],
-                            genome_seq.seq,
-                        ),
-                        axis=1,
-                    )
-                    # Tag with contig ID to avoid
-                    # confusion if IDs overlap between contigs
-                    all_amplicons["contig_id"] = genome_seq.id
-                    sample_amplicons_list.append(all_amplicons)
+        worker_func = process_amplicon_worker
 
-                # Combine results from all contigs for this sample
-                if not sample_amplicons_list:
-                    print(f"Warning: No sequences found in {path}")
-                    continue
-                full_sample_df = pd.concat(sample_amplicons_list,
-                                           ignore_index=True)
-                # Output directory setup
-                amp_out_dir = os.path.join(outdir, name, "amplicons")
-                os.makedirs(amp_out_dir, exist_ok=True)
-                full_sample_df.to_csv(os.path.join(amp_out_dir,
-                                                   "amplicon_stats.csv"),
-                                      index=False)
-                # Write FASTA files for simulation
-                full_sample_df["amplicon_suffix"] =\
-                    full_sample_df["amplicon_number"].apply(
-                    lambda x: x.split("_")[0] if "_" in x else x
-                )
-                for n, g in full_sample_df.groupby("amplicon_suffix"):
-                    write_fasta_group(g, n, amp_out_dir)
-
-                print("Starting read simulation...")
-                read_dir = os.path.join(outdir, name, "reads")
-                os.makedirs(read_dir, exist_ok=True)
-
-                fasta_files = [
-                    os.path.join(amp_out_dir, f)
-                    for f in os.listdir(amp_out_dir)
-                    if f.endswith((".fasta", ".fa"))
-                ]
-
-                for fasta_file in fasta_files:
-                    run_simulation_on_fasta(
-                        fasta_file,
-                        read_dir,
-                        cnt,
-                        simulator,
-                        wgsim_insert_size,
-                        wgsim_read_length,
-                        wgsim_error_rate,
-                        extra_flags=extra_simulator_flags
-                    )
-                # Merging logic remains the same
-                read_path1 = os.path.join(os.path.abspath(outdir),
-                                          name, "reads/merged_reads_1.fastq")
-                read_path2 = os.path.join(os.path.abspath(outdir),
-                                          name, "reads/merged_reads_2.fastq")
-                output_path1 = os.path.join(os.path.abspath(outdir),
-                                            "reads_1.fastq")
-                output_path2 = os.path.join(os.path.abspath(outdir),
-                                            "reads_2.fastq")
-                print(f"Merging reads for {name}...")
-                merge_fastq_files(read_path1, output_path1)
-                merge_fastq_files(read_path2, output_path2)
-                pbar.update(1)
-            print("Finished all samples!")
     else:
+        # Metagenomics / standard genome mode
+        task_args = []
+        for name, cnt in zip(sample_names, read_cnts):
+            sample_out_dir = os.path.join(outdir, name)
+            os.makedirs(sample_out_dir, exist_ok=True)
+
+            # Handle FASTA path resolution
+            if csv != "NA" and multifasta != "NA":
+                # Extract SeqRecords for this sample
+                # and save to a local .fasta file
+                sample_fasta = os.path.join(sample_out_dir,
+                                            f"{name}.fasta")
+                records = genome_map[name]
+                SeqIO.write(records, sample_fasta, "fasta")
+            else:
+                # Retrieve existing file path saved earlier
+                sample_fasta = genome_map_paths[name]
+
+            task_args.append((
+                name,
+                sample_fasta,
+                cnt,
+                outdir,
+                simulator,
+                wgsim_insert_size,
+                wgsim_read_length,
+                wgsim_error_rate,
+                extra_simulator_flags,
+            ))
+
+        worker_func = process_genome_worker
+
+    # Run Parallel Pool Execution
+    print(f"Spinning up parallel execution for {len(sample_names)} samples...")
+    with ProcessPoolExecutor() as executor:
+        futures = {executor.submit(worker_func,
+                                   arg): arg[0] for arg in task_args}
+
         with tqdm(total=len(sample_names),
                   desc="Simulation progress...") as pbar:
-            for name, path, cnt in zip(sample_names, sample_paths, read_cnts):
-                if not os.path.exists(os.path.join(outdir, name, "reads")):
-                    os.makedirs(os.path.join(outdir, name, "reads"))
-                run_simulation_on_fasta_single_genome(
-                        path,
-                        os.path.join(outdir, name, "reads"),
-                        cnt,
-                        simulator,
-                        extra_flags=extra_simulator_flags
-                    )
-                read_path1 = os.path.join(
-                    os.path.abspath(outdir), name, "reads/reads_1.fastq"
-                )
-                read_path2 = os.path.join(
-                    os.path.abspath(outdir), name, "reads/reads_2.fastq"
-                )
-                output_path1 = os.path.join(
-                    os.path.abspath(outdir), "reads_1.fastq")
-                output_path2 = os.path.join(
-                    os.path.abspath(outdir), "reads_2.fastq")
-                print("Merging all reads...")
-                merge_fastq_files(read_path1, output_path1)
-                merge_fastq_files(read_path2, output_path2)
-                print("Finished!")
-            pbar.update(1)
+            for future in as_completed(futures):
+                sample_name = futures[future]
+                try:
+                    result = future.result()
+                    if result[0] == "success":
+                        _, name, r_path1, r_path2 = result
+                        print(f"\nMerging reads for {name}...")
+                        merge_fastq_files(r_path1, output_path1)
+                        merge_fastq_files(r_path2, output_path2)
+                    elif result[0] == "warning":
+                        print(f"\n[{sample_name}] {result[1]}")
+                except Exception as e:
+                    print(f"\nError processing sample {sample_name}: {e}")
+                finally:
+                    pbar.update(1)
+
+    print("Finished all samples!")
 
 
 @cli.command()
@@ -284,47 +292,71 @@ def simulate_proportions(
     show_default=True,
     help="Maximum number of mismatches allowed in primer region",
 )
-def check_primers(genomes, primers, reference, maxmismatch):
+@click.option(
+    "--outdir",
+    default=".",
+    type=click.Path(exists=False),
+    help="Output directory",
+    show_default=True,
+)
+def check_primers(genomes, primers,
+                  reference, maxmismatch,
+                  outdir):
     from bygul.utils import (
-        assess_genome_quality_from_fasta,
         preprocess_primers,
-        find_closest_primer_match,
-        create_valid_primer_combinations,
+        process_primer_check_worker,
     )
+    # read the reference sequence
+    reference = next(SeqIO.parse(reference, "fasta"))
+    genome_map = defaultdict(list)
+    for record in SeqIO.parse(genomes, "fasta"):
+        sample = record.id.split("_")[0]
+        genome_map[sample].append(record)
+    df_primers_template = preprocess_primers(primers, reference)
+    task_args = [
+        (name, genome_map[name],
+            df_primers_template, maxmismatch, outdir)
+        for name in genome_map.keys()
+    ]
+    worker_func = process_primer_check_worker
 
-    assess_genome_quality_from_fasta(genomes)
-    primer_df = preprocess_primers(primers, reference)
-    print("Reading and preprocessing the primer file...")
-    all_results = []
+    # Run Parallel Pool Execution
+    print("Spinning up parallel execution for "
+          f"{len(genome_map.keys())} samples...")
 
-    # Parse ALL sequences in the multifasta
-    for genome_record in SeqIO.parse(genomes, "fasta"):
-        genome_id = genome_record.id
-        genome_seq = str(genome_record.seq)
-        df = find_closest_primer_match(primer_df, genome_seq,
-                                       maxmismatch)
-        all_amplicons = create_valid_primer_combinations(df)
-        all_amplicons = all_amplicons.fillna(0)
-        all_amplicons["amplicon_length"] = np.where(
-                    (all_amplicons["primer_start"] != 0)
-                    & (all_amplicons["primer_end"] != 0),
-                    all_amplicons["primer_end"]
-                    - all_amplicons["primer_start"]
-                    + all_amplicons["primer_seq_y"].str.len(),
-                    0,
-                )
-        all_amplicons["genome_id"] = genome_id
+    dfs = []
+    with ProcessPoolExecutor() as executor:
+        futures = {
+            executor.submit(worker_func, arg): arg[0]
+            for arg in task_args
+        }
 
-        all_results.append(all_amplicons)
-        # Combine results from all fasta entries
-    if all_results:
-        final_df = pd.concat(all_results, ignore_index=True)
+        with tqdm(total=len(genome_map.keys()),
+                  desc="Simulation progress...") as pbar:
+            for future in as_completed(futures):
+                sample_name = futures[future]
+                try:
+                    status, result = future.result()
+
+                    if status == "success":
+                        print(f"Successfully processed sample {sample_name}")
+                        dfs.append(result)   # result is the DataFrame
+
+                    elif status == "warning":
+                        print(f"\n[{sample_name}] {result}")
+
+                except Exception as e:
+                    print(f"\nError processing sample {sample_name}: {e}")
+
+                finally:
+                    pbar.update(1)
+
+    # Concatenate all successful DataFrames
+    if dfs:
+        final_df = pd.concat(dfs, ignore_index=True)
     else:
         final_df = pd.DataFrame()
-    final_df.to_csv(
-        os.path.join("amplicon_stats.csv"),
-        index=False,
-    )
+    final_df.to_csv(os.path.join(outdir, "amplicon_stats.csv"), index=False)
 
 
 if __name__ == "__main__":
