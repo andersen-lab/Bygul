@@ -83,11 +83,10 @@ class CommandLineTests(unittest.TestCase):
     def test_simulation_with_metagenomics(self):
         os.system(
             "bygul simulate-proportions "
-            "--primers bygul/tests/data/ARTIC_V4-1.bed "
             "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
             "bygul/tests/data/KR-SEARCH-120354.fasta "
             "--simulation_mode metagenomics "
-            "--proportions 0.8,0.2 --redo -1 150 -2 150"
+            "--proportions 0.8,0.2 --redo"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
