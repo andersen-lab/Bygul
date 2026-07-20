@@ -56,7 +56,22 @@ bygul simulate-proportions --genomes [SAMPLE1.fasta,SAMPLE2.fasta] --primers [pr
     ```bash
     bygul simulate-proportions --csv samples.csv --multifasta samples.fasta
     ```
+---
 
+## 🌍 Usage: Metagenomics Mode
+Simulate reads from entire samples without requiring a primer BED file or a reference sequence.
+
+### Basic Metagenomics Simulation
+```bash
+bygul simulate-proportions sample1.fasta,sample2.fasta --outdir results/ --simulation_mode metagenomics
+```
+
+### Metagenomics with Specific Parameters
+```bash
+bygul simulate-proportions sample1.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
+```
+
+---
 ## 📝 Technical Notes
 
 ### Parameter Handling
