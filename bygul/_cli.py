@@ -285,7 +285,10 @@ def simulate_proportions(
 @click.argument(
     "primers", type=str
 )
-@click.argument("reference", type=str)
+@click.option("--reference",
+              default="NA",
+              show_default=True,
+              help="Reference used to generate the primer file",)
 @click.option(
     "--maxmismatch",
     default=1,
