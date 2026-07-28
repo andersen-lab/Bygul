@@ -309,8 +309,9 @@ def check_primers(genomes, primers,
         preprocess_primers,
         process_primer_check_worker,
     )
-    # read the reference sequence
-    reference = next(SeqIO.parse(reference, "fasta"))
+    if reference != "NA":
+        # read the reference sequence
+        reference = next(SeqIO.parse(reference, "fasta"))
     genome_map = defaultdict(list)
     for record in SeqIO.parse(genomes, "fasta"):
         sample = record.id.split("_")[0]
