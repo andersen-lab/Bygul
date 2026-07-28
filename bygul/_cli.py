@@ -361,7 +361,8 @@ def check_primers(genomes, primers,
     else:
         final_df = pd.DataFrame()
     if len(final_df) > 1:
-        final_df.to_csv(os.path.join(outdir, "amplicon_stats.csv"), index=False)
+        final_df.to_csv(os.path.join(outdir,
+                                     "amplicon_stats.csv"), index=False)
 
 
 if __name__ == "__main__":
