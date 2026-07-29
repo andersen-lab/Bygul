@@ -815,6 +815,7 @@ def process_primer_check_worker(args):
                 f"Warning: No sequences found in {name}")
 
     full_sample_df = pd.concat(sample_amplicons_list, ignore_index=True)
+    full_sample_df = full_sample_df.drop(columns=['amplicon_sequence'])
     return ("success", full_sample_df)
 
 
