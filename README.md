@@ -1,12 +1,12 @@
 # Bygul: Amplicon & Metagenomics Read Simulator
 
-**Bygul** is a Python 3 tool designed for simulating sequencing reads in wastewater surveillance and other metagenomic applications. It allows users to simulate complex multi-sample datasets with customizable proportions using industry-standard backends like `wgsim` and `mason`.
+**Bygul** is a Python 3 tool designed for simulating sequencing reads in wastewater surveillance and other metagenomic applications. It allows users to simulate complex multi-sample datasets with customizable proportions using industry-standard backends like `wgsim`, `mason`, and ART Illumina.
 
 ---
 
 ## 🏗 Installation
 
-Bygul requires **Python 3**. Since it relies on external simulators (`wgsim` and `mason`), we recommend using Conda to manage dependencies.For more info on <a href="https://github.com/lh3/wgsim">wgsim</a> and <a href="https://github.com/seqan/seqan/blob/main/apps/mason2/README.mason_simulator">mason simulator</a> please check their documentations.
+Bygul requires **Python 3**. Since it relies on external simulators (`wgsim`, `mason`, and ART), we recommend using Conda to manage dependencies.For more info on <a href="https://github.com/lh3/wgsim">wgsim</a>, <a href="https://github.com/seqan/seqan/blob/main/apps/mason2/README.mason_simulator">mason simulator</a>, and <a href="https://www.niehs.nih.gov/research/resources/software/biostatistics/art">ART</a> please check their documentations.
 
 ### Option 1: Via Conda (Recommended)
 ```bash
@@ -17,7 +17,7 @@ conda create -n bygul bioconda::bygul
 ```bash
 pip install bygul
 ```
-*Note: Some binary dependencies (wgsim/mason) may need to be installed manually or built from source if using this method.*
+*Note: Some binary dependencies (wgsim/mason/ART) may need to be installed manually or built from source if using this method.*
 
 ### Option 3: Local Build from Source
 ```bash
@@ -43,7 +43,7 @@ bygul simulate-proportions --genomes [SAMPLE1.fasta,SAMPLE2.fasta] --primers [pr
     bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --primers primer.bed --reference reference.fasta --outdir results/ --maxmismatch 2
     ```
 * **Switching Simulators:**
-    Use `mason` instead of the default `wgsim`.
+    Use `mason` or `art` instead of the default `wgsim`.
     ```bash
     bygul simulate-proportions --genomes sample1.fasta,sample2.fasta --primers primer.bed --simulator mason
     ```
@@ -83,11 +83,13 @@ Bygul acts as a wrapper. While most flags are passed directly to the underlying 
 - `--readcnt`: Number of reads per amplicon.
 - `--wgsim_insert_size`: Insert size for wgsim.
 - `--wgsim_read_length` / `--wgsim_error_rate`.
+- `--art_read_length` / `--art_insert_size` / `--art_insert_sd` / `--art_seq_system`: paired-end ART Illumina defaults.
 
 To see all available backend flags, run:
 ```bash
 wgsim --help
 mason_simulator --help
+art_illumina --help
 ```
 Please note that some dependencies are not available through pypi.
 You need to install them using conda or build from source.

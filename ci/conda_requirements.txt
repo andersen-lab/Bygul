@@ -3,8 +3,10 @@ regex
 numpy
 pandas
 click
+art
 wgsim
 pytest
 minimap2
 freyja
+
 mason

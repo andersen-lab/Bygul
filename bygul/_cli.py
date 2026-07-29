@@ -77,8 +77,8 @@ def cli():
 @click.option(
     "--simulator",
     default="wgsim",
-    type=click.Choice(["wgsim", "mason"], case_sensitive=False),
-    help="Select the simulator to use (wgsim or mason)",
+    type=click.Choice(["wgsim", "mason", "art"], case_sensitive=False),
+    help="Select the simulator to use (wgsim, mason, or art)",
 )
 @click.option(
     "--simulation_mode",
@@ -95,7 +95,7 @@ def cli():
 @click.option(
     "--wgsim_insert_size", default=150,
     help="Outer distance for simulation using wgsim in amplicon"
-    "simulation mode."
+    " simulation mode."
 )
 @click.option(
     "--wgsim_read_length", default=150,
@@ -121,6 +121,10 @@ def simulate_proportions(
     wgsim_insert_size,
     wgsim_read_length,
     wgsim_error_rate,
+    art_read_length,
+    art_insert_size,
+    art_insert_sd,
+    art_seq_system,
     outdir,
     readcnt,
     maxmismatch,
