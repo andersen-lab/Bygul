@@ -33,7 +33,6 @@ setup(
         'bygul': ['data/*', ],
     },
     install_requires=[
-        "click", "pandas", "biopython",
-        "regex", "numpy", "tqdm"
+        "regex",
         ]
 )
