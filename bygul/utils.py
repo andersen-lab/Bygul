@@ -418,6 +418,7 @@ def run_simulation_on_fasta(
     wgsim_insert_size,
     wgsim_read_length,
     wgsim_error_rate,
+    amplicon_error_rate=0.0,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -458,6 +459,8 @@ def run_simulation_on_fasta(
                 str(wgsim_insert_size),
                 "-e",
                 str(wgsim_error_rate),
+                "-r",
+                str(amplicon_error_rate),
                 "-1",
                 str(wgsim_read_length),
                 "-2",
@@ -503,6 +506,7 @@ def run_simulation_on_fasta_single_genome(
     wgsim_insert_size,
     wgsim_read_length,
     wgsim_error_rate,
+    amplicon_error_rate=0.0,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -522,6 +526,8 @@ def run_simulation_on_fasta_single_genome(
             str(wgsim_insert_size),
             "-e",
             str(wgsim_error_rate),
+            "-r",
+            str(amplicon_error_rate),
             "-1",
             str(wgsim_read_length),
             "-2",
@@ -822,7 +828,7 @@ def process_amplicon_worker(args):
     """Worker for the 'amplicon' simulation mode."""
     (name, genome_seqs, cnt, df_primers_template, maxmismatch, outdir,
      simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
-     extra_simulator_flags) = args
+     amplicon_error_rate, extra_simulator_flags) = args
     sample_amplicons_list = []
     for genome_seq in genome_seqs:
         # Print information about the quality of the provided file
@@ -899,6 +905,7 @@ def process_amplicon_worker(args):
         run_simulation_on_fasta(
             fasta_file, read_dir, cnt, simulator,
             wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+            amplicon_error_rate,
             extra_flags=extra_simulator_flags
         )
 
@@ -914,7 +921,7 @@ def process_genome_worker(args):
     """Worker for the default/standard genome simulation mode (else clause)."""
     (name, sample_path, cnt, outdir,
      simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
-     extra_simulator_flags) = args
+     amplicon_error_rate, extra_simulator_flags) = args
     read_dir = os.path.join(outdir, name, "reads")
     os.makedirs(read_dir, exist_ok=True)
     run_simulation_on_fasta_single_genome(
@@ -923,6 +930,7 @@ def process_genome_worker(args):
         cnt,
         simulator,
         wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+        amplicon_error_rate,
         extra_flags=extra_simulator_flags
     )
     # Expected paths for merging step in main thread
