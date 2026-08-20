@@ -506,7 +506,7 @@ def run_simulation_on_fasta_single_genome(
     wgsim_insert_size,
     wgsim_read_length,
     wgsim_error_rate,
-    amplicon_error_rate=0.0,
+    amplicon_error_rate,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
