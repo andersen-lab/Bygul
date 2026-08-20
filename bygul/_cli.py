@@ -106,7 +106,7 @@ def cli():
     help="Error rate for simulation using wgsim"
 )
 @click.option(
-    "--amplicon_error_rate", default=0.0,
+    "--wgsim_amp_error_rate", default=0.0,
     help="Error rate used by wgsim on the original sequence "
     "(sets wgsim -r, the mutation rate)."
 )
@@ -126,7 +126,7 @@ def simulate_proportions(
     wgsim_insert_size,
     wgsim_read_length,
     wgsim_error_rate,
-    amplicon_error_rate,
+    wgsim_amp_error_rate,
     outdir,
     readcnt,
     maxmismatch,
@@ -219,7 +219,7 @@ def simulate_proportions(
                 wgsim_insert_size,
                 wgsim_read_length,
                 wgsim_error_rate,
-                amplicon_error_rate,
+                wgsim_amp_error_rate,
                 extra_simulator_flags,
             )
             for name, cnt in zip(sample_names, read_cnts)
@@ -255,7 +255,7 @@ def simulate_proportions(
                 wgsim_insert_size,
                 wgsim_read_length,
                 wgsim_error_rate,
-                amplicon_error_rate,
+                wgsim_amp_error_rate,
                 extra_simulator_flags,
             ))
 
