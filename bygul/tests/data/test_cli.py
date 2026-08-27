@@ -129,7 +129,6 @@ class CommandLineTests(unittest.TestCase):
             "bygul check-primers "
             "bygul/tests/data/ATM-2FFMD73N3.fasta "
             "bygul/tests/data/ARTIC_V4-1.bed "
-            "bygul/tests/data/reference.fasta"
         )
         self.assertTrue(file_exists(".", "amplicon_stats.csv"))
 

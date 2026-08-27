@@ -293,7 +293,12 @@ def simulate_proportions(
 @click.argument(
     "primers", type=str
 )
-@click.argument("reference", type=str)
+@click.option(
+    "--reference",
+    default="NA",
+    type=str,
+    help="Reference sequence file"
+)
 @click.option(
     "--maxmismatch",
     default=1,
@@ -315,7 +320,8 @@ def check_primers(genomes, primers,
         process_primer_check_worker,
     )
     # read the reference sequence
-    reference = next(SeqIO.parse(reference, "fasta"))
+    if reference != "NA":
+        reference = next(SeqIO.parse(reference, "fasta"))
     genome_map = defaultdict(list)
     for record in SeqIO.parse(genomes, "fasta"):
         sample = record.id.split("_")[0]
@@ -362,9 +368,8 @@ def check_primers(genomes, primers,
     # Concatenate all successful DataFrames
     if dfs:
         final_df = pd.concat(dfs, ignore_index=True)
-    else:
-        final_df = pd.DataFrame()
-    final_df.to_csv(os.path.join(outdir, "amplicon_stats.csv"), index=False)
+        final_df.to_csv(os.path.join(outdir,
+                                     "amplicon_stats.csv"), index=False)
 
 
 if __name__ == "__main__":
