@@ -106,6 +106,17 @@ class CommandLineTests(unittest.TestCase):
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
+    def test_simulation_with_art_metagenomics(self):
+        os.system(
+            "bygul simulate-proportions "
+            "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
+            "bygul/tests/data/KR-SEARCH-120354.fasta "
+            "--simulation_mode metagenomics "
+            "--proportions 0.8,0.2 --redo --simulator art "
+            "--read_length 200 --insert_size 200"
+        )
+        self.assertTrue(file_exists(".", "results/reads_1.fastq"))
+
     def test_simulation_with_csv(self):
         os.system(
             "bygul simulate-proportions "
