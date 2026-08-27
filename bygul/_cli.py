@@ -362,9 +362,8 @@ def check_primers(genomes, primers,
     # Concatenate all successful DataFrames
     if dfs:
         final_df = pd.concat(dfs, ignore_index=True)
-    else:
-        final_df = pd.DataFrame()
-    final_df.to_csv(os.path.join(outdir, "amplicon_stats.csv"), index=False)
+        final_df.to_csv(os.path.join(outdir,
+                                     "amplicon_stats.csv"), index=False)
 
 
 if __name__ == "__main__":
