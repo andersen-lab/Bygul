@@ -511,7 +511,8 @@ def run_simulation_on_fasta(
                 "-s",
                 str(insert_size_sd),  # Standard deviation of insert size
                 "-o",
-                os.path.join(output_dir, f"{output_prefix}_contig{contig_idx + 1}"),
+                os.path.join(output_dir,
+                             f"{output_prefix}_contig{contig_idx + 1}"),
             ]
             if extra_flags:
                 command.extend(extra_flags)
@@ -882,7 +883,7 @@ def process_amplicon_worker(args):
     """Worker for the 'amplicon' simulation mode."""
     (name, genome_seqs, cnt, df_primers_template, maxmismatch, outdir,
      simulator, insert_size, read_length, wgsim_error_rate,
-     amplicon_error_rate,art_seq_system,
+     amplicon_error_rate, art_seq_system,
      insert_size_sd, extra_simulator_flags) = args
     sample_amplicons_list = []
     for genome_seq in genome_seqs:
@@ -976,7 +977,8 @@ def process_genome_worker(args):
     """Worker for the default/standard genome simulation mode (else clause)."""
     (name, sample_path, cnt, outdir,
      simulator, insert_size, read_length, wgsim_error_rate,
-     amplicon_error_rate, insert_size_sd, art_seq_system, extra_simulator_flags) = args
+     amplicon_error_rate, insert_size_sd,
+     art_seq_system, extra_simulator_flags) = args
     read_dir = os.path.join(outdir, name, "reads")
     os.makedirs(read_dir, exist_ok=True)
     run_simulation_on_fasta_single_genome(

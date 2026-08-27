@@ -94,6 +94,7 @@ class CommandLineTests(unittest.TestCase):
             "--read_length 200 --insert_size_sd 50"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
+
     def test_simulation_with_art(self):
         os.system(
             "bygul simulate-proportions "
