@@ -495,6 +495,9 @@ def run_simulation_on_fasta(
             if extra_flags:
                 command.extend(extra_flags)
         elif simulator == "art":
+            prefix_path = os.path.join(output_dir,
+                                       f"{output_prefix}"
+                                       f"_contig{contig_idx + 1}_")
             command = [
                 "art_illumina",
                 "-ss",
@@ -516,6 +519,14 @@ def run_simulation_on_fasta(
             ]
             if extra_flags:
                 command.extend(extra_flags)
+            os.rename(f"{prefix_path}1.fq",
+                      os.path.join(output_dir,
+                                   f"{output_prefix}"
+                                   f"_contig{contig_idx + 1}_1.fastq"))
+            os.rename(f"{prefix_path}2.fq",
+                      os.path.join(output_dir,
+                                   f"{output_prefix}"
+                                   f"_contig{contig_idx + 1}_2.fastq"))
         # Run the simulator command and capture any errors
         try:
             subprocess.run(
@@ -608,6 +619,10 @@ def run_simulation_on_fasta_single_genome(
         ]
         if extra_flags:
             command.extend(extra_flags)
+        os.rename(os.path.join(output_dir, "reads_1.fq"),
+                  os.path.join(output_dir, "reads_1.fastq"))
+        os.rename(os.path.join(output_dir, "reads_2.fq"),
+                  os.path.join(output_dir, "reads_2.fastq"))
     # Run the simulator command and capture any errors
     try:
         subprocess.run(
