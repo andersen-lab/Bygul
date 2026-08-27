@@ -1,5 +1,4 @@
 biopython
-regex
 numpy
 pandas
 click
@@ -8,3 +7,4 @@ pytest
 minimap2
 freyja
 mason
+art
