@@ -77,7 +77,7 @@ def cli():
 @click.option(
     "--simulator",
     default="wgsim",
-    type=click.Choice(["wgsim", "mason"], case_sensitive=False),
+    type=click.Choice(["wgsim", "mason","art"], case_sensitive=False),
     help="Select the simulator to use (wgsim or mason)",
 )
 @click.option(
