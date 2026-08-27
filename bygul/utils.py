@@ -128,9 +128,6 @@ def validate_simulation_args(simulation_mode, primers, reference,
     if simulation_mode == "metagenomics" and reference != "NA":
         print("Reference file not needed for metagenomics simulation")
         sys.exit(1)
-    if simulation_mode == "amplicon" and reference == "NA":
-        print("Reference file is required for simulation mode amplicon")
-        sys.exit(1)
     if proportions_csv != "NA":
         if proportions != "NA":
             print("Cannot use --proportions with --csv")
