@@ -93,13 +93,20 @@ def cli():
     help="Maximum number of mismatches allowed in primer region",
 )
 @click.option(
-    "--wgsim_insert_size", default=150,
-    help="Outer distance for simulation using wgsim in amplicon"
-    "simulation mode."
+    "--insert_size", default=150,
+    help="Outer distance for simulation."
 )
 @click.option(
-    "--wgsim_read_length", default=150,
-    help="Read length for simulation using wgsim."
+    "--insert_size_sd", default=10,
+    help="Standard deviation of insert size for simulation"
+)
+@click.option(
+    "--art_seq_system", default="HS25",
+    help="art sequencing system to use for simulation using art"
+)
+@click.option(
+    "--read_length", default=150,
+    help="Read length for simulation."
 )
 @click.option(
     "--wgsim_error_rate", default=0.0001,
