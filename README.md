@@ -68,7 +68,7 @@ bygul simulate-proportions sample1.fasta,sample2.fasta --outdir results/ --simul
 
 ### Metagenomics with Specific Parameters
 ```bash
-bygul simulate-proportions sample1.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --illumina-read-length 200
+bygul simulate-proportions sample1.fasta,sample2.fasta --proportions 0.5,0.5 --outdir results/ --simulation_mode metagenomics --simulator mason --read_length 200
 ```
 ### Metagenomics with csv and multifasta
 ```bash
@@ -79,15 +79,18 @@ bygul simulate-proportions --csv samples.csv --multifasta samples.fasta --outdir
 ## 📝 Technical Notes
 
 ### Parameter Handling
-Bygul acts as a wrapper. While most flags are passed directly to the underlying simulators, the following are managed directly by Bygul for more realistic simulations(amplicon simulation mode only):
+Bygul acts as a wrapper. While most flags are passed directly to the underlying simulators, the following are managed directly by Bygul for more realistic simulations:
 - `--readcnt`: Number of reads per amplicon.
-- `--wgsim_insert_size`: Insert size for wgsim.
-- `--wgsim_read_length` / `--wgsim_error_rate`.
+- `--insert_size`: Insert size mean value.
+- `--insert_size_sd`: Insert size standard deviation.
+- `--read_length`: Read length.
+- `--wgsim_error_rate`/`--wgsim_amp_error_rate`/`art_seq_system`: amplicon specific parameters.
 
 To see all available backend flags, run:
 ```bash
 wgsim --help
 mason_simulator --help
+art_illumina --help
 ```
 Please note that some dependencies are not available through pypi.
 You need to install them using conda or build from source.
