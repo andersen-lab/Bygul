@@ -88,7 +88,7 @@ class ProportionTests(unittest.TestCase):
             "--redo "
             "--simulator mason "
             "--reference bygul/tests/data/reference.fasta "
-            "--read_length 150"
+            "--read_length 150 --insert_size_sd 400"
         )
 
         self.assertTrue(os.path.exists("results/reads_1.fastq"))
@@ -105,7 +105,7 @@ class ProportionTests(unittest.TestCase):
             "--redo "
             "--simulator mason "
             "--reference bygul/tests/data/reference.fasta "
-            "--read_length 150"
+            "--read_length 150 --insert_size_sd 400"
         )
 
         self.assertTrue(os.path.exists("results/reads_1.fastq"))

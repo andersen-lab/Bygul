@@ -91,7 +91,7 @@ class CommandLineTests(unittest.TestCase):
             "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
             "bygul/tests/data/KR-SEARCH-120354.fasta "
             "--proportions 0.8,0.2 --redo --simulator mason "
-            "--read_length 150 --insert_size_sd 200"
+            "--read_length 150 --insert_size_sd 400"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
@@ -125,7 +125,7 @@ class CommandLineTests(unittest.TestCase):
             "--multifasta bygul/tests/data/sample_genomes.fasta "
             "--redo --simulator mason "
             "--reference bygul/tests/data/reference.fasta "
-            "--read_length 150 --insert_size_sd 200"
+            "--read_length 150 --insert_size_sd 400"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
