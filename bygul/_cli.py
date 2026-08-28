@@ -93,7 +93,7 @@ def cli():
     help="Maximum number of mismatches allowed in primer region",
 )
 @click.option(
-    "--insert_size", default=150,
+    "--insert_size", default=200,
     help="Outer distance for simulation."
 )
 @click.option(
