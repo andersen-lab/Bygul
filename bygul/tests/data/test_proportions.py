@@ -73,7 +73,7 @@ class ProportionTests(unittest.TestCase):
             "--csv bygul/tests/data/sample_proportions.csv "
             "--multifasta bygul/tests/data/sample_genomes.fasta "
             "--redo --simulation_mode metagenomics "
-            "--illumina-read-length 200"
+            "--read_length 150"
         )
 
         self.assertTrue(os.path.exists("results/reads_1.fastq"))
@@ -88,7 +88,7 @@ class ProportionTests(unittest.TestCase):
             "--redo "
             "--simulator mason "
             "--reference bygul/tests/data/reference.fasta "
-            "--illumina-read-length 200"
+            "--read_length 150"
         )
 
         self.assertTrue(os.path.exists("results/reads_1.fastq"))
@@ -105,7 +105,7 @@ class ProportionTests(unittest.TestCase):
             "--redo "
             "--simulator mason "
             "--reference bygul/tests/data/reference.fasta "
-            "--illumina-read-length 200"
+            "--read_length 150"
         )
 
         self.assertTrue(os.path.exists("results/reads_1.fastq"))
