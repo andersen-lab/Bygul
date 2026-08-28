@@ -495,9 +495,9 @@ def run_simulation_on_fasta(
             if extra_flags:
                 command.extend(extra_flags)
         elif simulator == "art":
-            prefix_path = os.path.join(output_dir,
-                                       f"{output_prefix}"
-                                       f"_contig{contig_idx + 1}_")
+            art_output_prefix = os.path.join(
+                output_dir, f"{output_prefix}_contig{contig_idx + 1}_"
+            )
             command = [
                 "art_illumina",
                 "-ss",
