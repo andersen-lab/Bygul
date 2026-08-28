@@ -9,7 +9,7 @@ from collections import defaultdict
 
 
 @click.group(context_settings={"show_default": True})
-@click.version_option("4.0.1")
+@click.version_option("4.0.2")
 def cli():
     pass
 
@@ -77,7 +77,7 @@ def cli():
 @click.option(
     "--simulator",
     default="wgsim",
-    type=click.Choice(["wgsim", "mason"], case_sensitive=False),
+    type=click.Choice(["wgsim", "mason", "art"], case_sensitive=False),
     help="Select the simulator to use (wgsim or mason)",
 )
 @click.option(
@@ -93,13 +93,20 @@ def cli():
     help="Maximum number of mismatches allowed in primer region",
 )
 @click.option(
-    "--wgsim_insert_size", default=150,
-    help="Outer distance for simulation using wgsim in amplicon"
-    "simulation mode."
+    "--insert_size", default=200,
+    help="Outer distance for simulation."
 )
 @click.option(
-    "--wgsim_read_length", default=150,
-    help="Read length for simulation using wgsim."
+    "--insert_size_sd", default=10,
+    help="Standard deviation of insert size for simulation"
+)
+@click.option(
+    "--art_seq_system", default="HS25",
+    help="art sequencing system to use for simulation using art"
+)
+@click.option(
+    "--read_length", default=150,
+    help="Read length for simulation."
 )
 @click.option(
     "--wgsim_error_rate", default=0.0001,
@@ -123,10 +130,12 @@ def simulate_proportions(
     proportions,
     reference,
     primers,
-    wgsim_insert_size,
-    wgsim_read_length,
+    insert_size,
+    read_length,
     wgsim_error_rate,
     wgsim_amp_error_rate,
+    insert_size_sd,
+    art_seq_system,
     outdir,
     readcnt,
     maxmismatch,
@@ -216,10 +225,12 @@ def simulate_proportions(
                 maxmismatch,
                 outdir,
                 simulator,
-                wgsim_insert_size,
-                wgsim_read_length,
+                insert_size,
+                read_length,
                 wgsim_error_rate,
                 wgsim_amp_error_rate,
+                art_seq_system,
+                insert_size_sd,
                 extra_simulator_flags,
             )
             for name, cnt in zip(sample_names, read_cnts)
@@ -252,10 +263,12 @@ def simulate_proportions(
                 cnt,
                 outdir,
                 simulator,
-                wgsim_insert_size,
-                wgsim_read_length,
+                insert_size,
+                read_length,
                 wgsim_error_rate,
                 wgsim_amp_error_rate,
+                insert_size_sd,
+                art_seq_system,
                 extra_simulator_flags,
             ))
 

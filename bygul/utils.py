@@ -128,9 +128,6 @@ def validate_simulation_args(simulation_mode, primers, reference,
     if simulation_mode == "metagenomics" and reference != "NA":
         print("Reference file not needed for metagenomics simulation")
         sys.exit(1)
-    if simulation_mode == "amplicon" and reference == "NA":
-        print("Reference file is required for simulation mode amplicon")
-        sys.exit(1)
     if proportions_csv != "NA":
         if proportions != "NA":
             print("Cannot use --proportions with --csv")
@@ -415,10 +412,12 @@ def run_simulation_on_fasta(
     output_dir,
     read_cnt,
     simulator,
-    wgsim_insert_size,
-    wgsim_read_length,
+    insert_size,
+    read_length,
     wgsim_error_rate,
-    amplicon_error_rate=0.0,
+    amplicon_error_rate,
+    insert_size_sd,
+    art_seq_system,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -456,15 +455,17 @@ def run_simulation_on_fasta(
                 "-N",
                 str(reads_per_contig),
                 "-d",
-                str(wgsim_insert_size),
+                str(insert_size),
                 "-e",
                 str(wgsim_error_rate),
                 "-r",
                 str(amplicon_error_rate),
+                "-s",
+                str(insert_size_sd),
                 "-1",
-                str(wgsim_read_length),
+                str(read_length),
                 "-2",
-                str(wgsim_read_length),
+                str(read_length),
                 fasta_file,
                 output1,
                 output2,
@@ -472,7 +473,7 @@ def run_simulation_on_fasta(
             if extra_flags:
                 command.extend(extra_flags)
 
-        else:
+        elif simulator == "mason":
             # Adjust Mason command
             command = [
                 "mason_simulator",
@@ -480,6 +481,12 @@ def run_simulation_on_fasta(
                 fasta_file,
                 "-n",
                 str(int(reads_per_contig)),
+                "--illumina-read-length",
+                str(read_length),
+                "--fragment-size-std-dev",
+                str(insert_size_sd),
+                "--fragment-mean-size",
+                str(insert_size),
                 "-o",
                 output1,
                 "-or",
@@ -487,15 +494,53 @@ def run_simulation_on_fasta(
             ]
             if extra_flags:
                 command.extend(extra_flags)
-        # Run the simulator command and capture any errors
-        try:
-            subprocess.run(
-                command, check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError as e:
-            print(f"An error occurred while running the command: {e}")
-        # Merge the contig-specific output into the final merged output files
-        merge_fastq_files(output1, merged_output1)
-        merge_fastq_files(output2, merged_output2)
+        elif simulator == "art":
+            art_output_prefix = os.path.join(
+                output_dir, f"{output_prefix}_contig{contig_idx + 1}_"
+            )
+            command = [
+                "art_illumina",
+                "-ss",
+                str(art_seq_system),
+                "-i",
+                fasta_file,
+                "-p",
+                "-l",
+                str(read_length),
+                "-c",
+                str(reads_per_contig),
+                "-m",
+                str(insert_size),
+                "-s",
+                str(insert_size_sd),  # Standard deviation of insert size
+                "-o",
+                str(art_output_prefix),
+                "-na"
+            ]
+            if extra_flags:
+                command.extend(extra_flags)
+    try:
+        result = subprocess.run(
+            command, check=True, capture_output=True, text=True
+        )
+        if simulator == "art":
+            generated_1 = art_output_prefix + "1.fq"
+            generated_2 = art_output_prefix + "2.fq"
+            if not os.path.exists(generated_1):
+                raise FileNotFoundError(
+                    f"ART output not found at {generated_1}. "
+                    f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+                )
+
+            shutil.move(generated_1, output1)
+            shutil.move(generated_2, output2)
+
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while running command: {e.cmd}")
+        print(f"Stderr output: {e.stderr}")
+        raise
+    merge_fastq_files(output1, merged_output1)
+    merge_fastq_files(output2, merged_output2)
 
 
 def run_simulation_on_fasta_single_genome(
@@ -503,10 +548,12 @@ def run_simulation_on_fasta_single_genome(
     output_dir,
     read_cnt,
     simulator,
-    wgsim_insert_size,
-    wgsim_read_length,
+    insert_size,
+    read_length,
     wgsim_error_rate,
     amplicon_error_rate,
+    insert_size_sd,
+    art_seq_system,
     extra_flags=None
 ):
     """Runs simulator on a single FASTA file with the given parameters."""
@@ -523,29 +570,32 @@ def run_simulation_on_fasta_single_genome(
             "-N",
             str(read_cnt),
             "-d",
-            str(wgsim_insert_size),
+            str(insert_size),
             "-e",
             str(wgsim_error_rate),
             "-r",
             str(amplicon_error_rate),
             "-1",
-            str(wgsim_read_length),
+            str(read_length),
             "-2",
-            str(wgsim_read_length),
+            str(read_length),
             fasta_file,
             output1,
             output2,
         ]
         if extra_flags:
             command.extend(extra_flags)
-    else:
-        # Adjust Mason command
+    elif simulator == "mason":
         command = [
             "mason_simulator",
             "-ir",
             fasta_file,
             "-n",
             str(read_cnt),
+            "--illumina-read-length",
+            str(read_length),
+            "--fragment-size-std-dev",
+            str(insert_size_sd),
             "-o",
             output1,
             "-or",
@@ -553,12 +603,51 @@ def run_simulation_on_fasta_single_genome(
         ]
         if extra_flags:
             command.extend(extra_flags)
-    # Run the simulator command and capture any errors
+    elif simulator == "art":
+        art_output_prefix = os.path.join(
+            output_dir, "reads_"
+        )
+        command = [
+            "art_illumina",
+            "-ss",
+            str(art_seq_system),
+            "-i",
+            fasta_file,
+            "-p",
+            "-l",
+            str(read_length),
+            "-c",
+            str(read_cnt),
+            "-m",
+            str(insert_size),
+            "-s",
+            str(insert_size_sd),  # Standard deviation of insert size
+            "-o",
+            art_output_prefix,
+            "-na"
+        ]
+        if extra_flags:
+            command.extend(extra_flags)
     try:
-        subprocess.run(
-            command, check=True, capture_output=True, text=True)
+        result = subprocess.run(
+            command, check=True, capture_output=True, text=True
+        )
+        if simulator == "art":
+            generated_1 = art_output_prefix + "1.fq"
+            generated_2 = art_output_prefix + "2.fq"
+            if not os.path.exists(generated_1):
+                raise FileNotFoundError(
+                    f"ART output not found at {generated_1}. "
+                    f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+                )
+
+            shutil.move(generated_1, output1)
+            shutil.move(generated_2, output2)
+
     except subprocess.CalledProcessError as e:
-        print(f"An error occurred while running the command: {e}")
+        print(f"An error occurred while running command: {e.cmd}")
+        print(f"Stderr output: {e.stderr}")
+        raise
 
 
 # Extended ambiguity-aware mismatch display
@@ -827,8 +916,9 @@ def process_primer_check_worker(args):
 def process_amplicon_worker(args):
     """Worker for the 'amplicon' simulation mode."""
     (name, genome_seqs, cnt, df_primers_template, maxmismatch, outdir,
-     simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
-     amplicon_error_rate, extra_simulator_flags) = args
+     simulator, insert_size, read_length, wgsim_error_rate,
+     amplicon_error_rate, art_seq_system,
+     insert_size_sd, extra_simulator_flags) = args
     sample_amplicons_list = []
     for genome_seq in genome_seqs:
         # Print information about the quality of the provided file
@@ -904,8 +994,8 @@ def process_amplicon_worker(args):
     for fasta_file in fasta_files:
         run_simulation_on_fasta(
             fasta_file, read_dir, cnt, simulator,
-            wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
-            amplicon_error_rate,
+            insert_size, read_length, wgsim_error_rate,
+            amplicon_error_rate, insert_size_sd, art_seq_system,
             extra_flags=extra_simulator_flags
         )
 
@@ -920,8 +1010,9 @@ def process_amplicon_worker(args):
 def process_genome_worker(args):
     """Worker for the default/standard genome simulation mode (else clause)."""
     (name, sample_path, cnt, outdir,
-     simulator, wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
-     amplicon_error_rate, extra_simulator_flags) = args
+     simulator, insert_size, read_length, wgsim_error_rate,
+     amplicon_error_rate, insert_size_sd,
+     art_seq_system, extra_simulator_flags) = args
     read_dir = os.path.join(outdir, name, "reads")
     os.makedirs(read_dir, exist_ok=True)
     run_simulation_on_fasta_single_genome(
@@ -929,8 +1020,9 @@ def process_genome_worker(args):
         read_dir,
         cnt,
         simulator,
-        wgsim_insert_size, wgsim_read_length, wgsim_error_rate,
+        insert_size, read_length, wgsim_error_rate,
         amplicon_error_rate,
+        insert_size_sd, art_seq_system,
         extra_flags=extra_simulator_flags
     )
     # Expected paths for merging step in main thread
