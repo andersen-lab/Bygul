@@ -623,7 +623,8 @@ def run_simulation_on_fasta_single_genome(
             "-s",
             str(insert_size_sd),  # Standard deviation of insert size
             "-o",
-            os.path.join(output_dir, "reads"),
+            art_output_prefix,
+            "-na"
         ]
         if extra_flags:
             command.extend(extra_flags)
