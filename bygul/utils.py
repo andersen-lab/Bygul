@@ -519,23 +519,28 @@ def run_simulation_on_fasta(
             ]
             if extra_flags:
                 command.extend(extra_flags)
-            os.rename(f"{prefix_path}1.fq",
-                      os.path.join(output_dir,
-                                   f"{output_prefix}"
-                                   f"_contig{contig_idx + 1}_1.fastq"))
-            os.rename(f"{prefix_path}2.fq",
-                      os.path.join(output_dir,
-                                   f"{output_prefix}"
-                                   f"_contig{contig_idx + 1}_2.fastq"))
-        # Run the simulator command and capture any errors
-        try:
-            subprocess.run(
-                command, check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError as e:
-            print(f"An error occurred while running the command: {e}")
-        # Merge the contig-specific output into the final merged output files
-        merge_fastq_files(output1, merged_output1)
-        merge_fastq_files(output2, merged_output2)
+    try:
+        result = subprocess.run(
+            command, check=True, capture_output=True, text=True
+        )
+        if simulator == "art":
+            generated_1 = art_output_prefix + "1.fq"
+            generated_2 = art_output_prefix + "2.fq"
+            if not os.path.exists(generated_1):
+                raise FileNotFoundError(
+                    f"ART output not found at {generated_1}. "
+                    f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+                )
+
+            shutil.move(generated_1, output1)
+            shutil.move(generated_2, output2)
+
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while running command: {e.cmd}")
+        print(f"Stderr output: {e.stderr}")
+        raise
+    merge_fastq_files(output1, merged_output1)
+    merge_fastq_files(output2, merged_output2)
 
 
 def run_simulation_on_fasta_single_genome(
@@ -599,6 +604,9 @@ def run_simulation_on_fasta_single_genome(
         if extra_flags:
             command.extend(extra_flags)
     elif simulator == "art":
+        art_output_prefix = os.path.join(
+            output_dir, "reads_"
+        )
         command = [
             "art_illumina",
             "-ss",
@@ -619,16 +627,26 @@ def run_simulation_on_fasta_single_genome(
         ]
         if extra_flags:
             command.extend(extra_flags)
-        os.rename(os.path.join(output_dir, "reads_1.fq"),
-                  os.path.join(output_dir, "reads_1.fastq"))
-        os.rename(os.path.join(output_dir, "reads_2.fq"),
-                  os.path.join(output_dir, "reads_2.fastq"))
-    # Run the simulator command and capture any errors
     try:
-        subprocess.run(
-            command, check=True, capture_output=True, text=True)
+        result = subprocess.run(
+            command, check=True, capture_output=True, text=True
+        )
+        if simulator == "art":
+            generated_1 = art_output_prefix + "1.fq"
+            generated_2 = art_output_prefix + "2.fq"
+            if not os.path.exists(generated_1):
+                raise FileNotFoundError(
+                    f"ART output not found at {generated_1}. "
+                    f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+                )
+
+            shutil.move(generated_1, output1)
+            shutil.move(generated_2, output2)
+
     except subprocess.CalledProcessError as e:
-        print(f"An error occurred while running the command: {e}")
+        print(f"An error occurred while running command: {e.cmd}")
+        print(f"Stderr output: {e.stderr}")
+        raise
 
 
 # Extended ambiguity-aware mismatch display
