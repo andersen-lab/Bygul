@@ -514,8 +514,8 @@ def run_simulation_on_fasta(
                 "-s",
                 str(insert_size_sd),  # Standard deviation of insert size
                 "-o",
-                os.path.join(output_dir,
-                             f"{output_prefix}_contig{contig_idx + 1}"),
+                str(art_output_prefix),
+                "-na"
             ]
             if extra_flags:
                 command.extend(extra_flags)
