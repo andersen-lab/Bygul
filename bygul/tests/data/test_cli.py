@@ -91,7 +91,7 @@ class CommandLineTests(unittest.TestCase):
             "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
             "bygul/tests/data/KR-SEARCH-120354.fasta "
             "--proportions 0.8,0.2 --redo --simulator mason "
-            "--read_length 200 --insert_size_sd 50"
+            "--read_length 150 --insert_size_sd 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
@@ -102,7 +102,7 @@ class CommandLineTests(unittest.TestCase):
             "--genomes bygul/tests/data/ATM-2FFMD73N3.fasta,"
             "bygul/tests/data/KR-SEARCH-120354.fasta "
             "--proportions 0.8,0.2 --redo --simulator art "
-            "--read_length 200 --insert_size_sd 50"
+            "--read_length 150 --insert_size_sd 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
@@ -113,7 +113,7 @@ class CommandLineTests(unittest.TestCase):
             "bygul/tests/data/KR-SEARCH-120354.fasta "
             "--simulation_mode metagenomics "
             "--proportions 0.8,0.2 --redo --simulator art "
-            "--read_length 200 --insert_size 200"
+            "--read_length 150 --insert_size 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
@@ -125,7 +125,7 @@ class CommandLineTests(unittest.TestCase):
             "--multifasta bygul/tests/data/sample_genomes.fasta "
             "--redo --simulator mason "
             "--reference bygul/tests/data/reference.fasta "
-            "--read_length 200 --insert_size_sd 50"
+            "--read_length 150 --insert_size_sd 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
@@ -135,7 +135,7 @@ class CommandLineTests(unittest.TestCase):
             "--csv bygul/tests/data/sample_proportions.csv "
             "--multifasta bygul/tests/data/sample_genomes.fasta "
             "--redo --simulation_mode metagenomics "
-            "--read_length 200 --insert_size 200"
+            "--read_length 150 --insert_size 200"
         )
         self.assertTrue(file_exists(".", "results/reads_1.fastq"))
 
