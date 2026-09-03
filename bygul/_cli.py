@@ -47,6 +47,13 @@ def cli():
     ),
 )
 @click.option(
+    "--threads",
+    default=4,
+    type=int,
+    help="Number of threads to use for simulation."
+    "(N samples will be processed in parallel)."
+)
+@click.option(
     "--csv",
     default="NA",
     type=str,
@@ -143,7 +150,8 @@ def simulate_proportions(
     redo,
     simulation_mode,
     csv,
-    multifasta
+    multifasta,
+    threads
 ):
     from bygul.utils import (
         preprocess_primers,
@@ -276,7 +284,8 @@ def simulate_proportions(
 
     # Run Parallel Pool Execution
     print(f"Spinning up parallel execution for {len(sample_names)} samples...")
-    with ProcessPoolExecutor() as executor:
+    max_threads = threads
+    with ProcessPoolExecutor(max_workers=max_threads) as executor:
         futures = {executor.submit(worker_func,
                                    arg): arg[0] for arg in task_args}
 
@@ -325,9 +334,16 @@ def simulate_proportions(
     help="Output directory",
     show_default=True,
 )
+@click.option(
+    "--threads",
+    default=4,
+    type=int,
+    help="Number of threads to use for simulation."
+    "(N samples will be processed in parallel)."
+)
 def check_primers(genomes, primers,
                   reference, maxmismatch,
-                  outdir):
+                  outdir, threads):
     from bygul.utils import (
         preprocess_primers,
         process_primer_check_worker,
@@ -352,7 +368,8 @@ def check_primers(genomes, primers,
           f"{len(genome_map.keys())} samples...")
 
     dfs = []
-    with ProcessPoolExecutor() as executor:
+    max_threads = threads
+    with ProcessPoolExecutor(max_workers=max_threads) as executor:
         futures = {
             executor.submit(worker_func, arg): arg[0]
             for arg in task_args
