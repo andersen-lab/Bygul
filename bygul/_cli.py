@@ -9,7 +9,7 @@ from collections import defaultdict
 
 
 @click.group(context_settings={"show_default": True})
-@click.version_option("4.0.3")
+@click.version_option("4.0.5")
 def cli():
     pass
 
@@ -85,7 +85,7 @@ def cli():
     "--simulator",
     default="wgsim",
     type=click.Choice(["wgsim", "mason", "art"], case_sensitive=False),
-    help="Select the simulator to use (wgsim or mason)",
+    help="Select the simulator to use (wgsim, mason, or art)",
 )
 @click.option(
     "--simulation_mode",

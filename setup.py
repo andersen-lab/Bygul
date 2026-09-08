@@ -11,12 +11,12 @@ with open('README.md') as f:
     long_description = f.read()
 
 
-description = ("Amplicon read simualtor")
+description = ("Amplicon read simulator")
 
 
 setup(
     name="bygul",
-    version="V4.0.3",
+    version="V4.0.5",
     packages=find_packages(include=['bygul']),
     author="Maryam Ahmadi Jeshvaghane",
     license='BSD 2-Clause',
@@ -31,8 +31,5 @@ setup(
         ''',
     package_data={
         'bygul': ['data/*', ],
-    },
-    install_requires=[
-        "regex",
-        ]
+    }
 )
