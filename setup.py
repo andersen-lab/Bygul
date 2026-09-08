@@ -11,7 +11,7 @@ with open('README.md') as f:
     long_description = f.read()
 
 
-description = ("Amplicon read simualtor")
+description = ("Amplicon read simulator")
 
 
 setup(
