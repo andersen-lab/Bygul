@@ -9,7 +9,7 @@ from collections import defaultdict
 
 
 @click.group(context_settings={"show_default": True})
-@click.version_option("4.0.3")
+@click.version_option("4.0.5")
 def cli():
     pass
 
