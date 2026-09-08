@@ -8,3 +8,4 @@ minimap2
 freyja
 mason
 art
+regex
