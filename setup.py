@@ -31,8 +31,5 @@ setup(
         ''',
     package_data={
         'bygul': ['data/*', ],
-    },
-    install_requires=[
-        "regex",
-        ]
+    }
 )
